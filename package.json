@@ -1,0 +1,20 @@
+{
+  "name": "0xcert-ethereum",
+  "version": "0.1.0",
+  "description": "0xcert protocol implementation for Ethereum blockchain.",
+  "private": true,
+  "main": "truffle.js",
+  "directories": {
+    "contracts": "contracts",
+    "migrations": "migrations",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "truffle test"
+  },
+  "author": "Kristijan Sedlak <kristijan@0xcert.org>, Lika Kacil <luka.kacil@0xcert.org>, Tadej Vengust <tadej.vengust@0xcert.org>",
+  "license": "MIT",
+  "devDependencies": {
+    "truffle": "4.0.6"
+  }
+}
