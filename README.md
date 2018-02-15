@@ -9,3 +9,5 @@ This project is built using [Truffle](http://truffleframework.com) framework.
 * Run `npm install` to install dependencies.
 
 * Run `npm test` to run tests.
+
+* Run `npm run flatten` to merge the source code into a single file.

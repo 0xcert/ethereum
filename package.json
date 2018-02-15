@@ -10,11 +10,13 @@
     "test": "test"
   },
   "scripts": {
+    "flatten": "truffle-flattener contracts/*.sol >> build/bundle.sol",
     "test": "truffle test"
   },
-  "author": "Kristijan Sedlak <kristijan@0xcert.org>, Lika Kacil <luka.kacil@0xcert.org>, Tadej Vengust <tadej.vengust@0xcert.org>",
+  "author": "https://0xcert.org",
   "license": "MIT",
   "devDependencies": {
-    "truffle": "4.0.6"
+    "truffle": "4.0.6",
+    "truffle-flattener": "1.2.0"
   }
 }
