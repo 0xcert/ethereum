@@ -1,3 +1,6 @@
+![Build Status](https://travis-ci.org/xpepermint/rawmodeljs.svg?branch=master)&nbsp;
+[![Dependency Status](https://gemnasium.com/badges/github.com/0xcert/ethereum.svg)](https://gemnasium.com/github.com/0xcert/ethereum)
+
 # [0xcert](https://0xcert.org)-[ethereum](https://ethereum.org)
 
 > 0xcert protocol implementation for Ethereum blockchain.
