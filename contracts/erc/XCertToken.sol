@@ -25,9 +25,7 @@ contract XCertToken {
   string public name = "XCert Token";
   string public symbol = "XCT";
   uint8 public decimals = 18;
-  // TODO(luka): Initial value for constant variable has to be compile-time constant.
-  // This will fail to compile with the next breaking version change.
-  uint256 public constant INITIAL_SUPPLY = 400000000 * (10 ** uint256(decimals));
+  uint256 public constant INITIAL_SUPPLY = 400000000000000000000000000; // 400 mio
   bool public transferEnabled = false;
 
   event Transfer(address indexed from, address indexed to, uint256 value);
