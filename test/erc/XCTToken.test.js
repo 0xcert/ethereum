@@ -1,13 +1,13 @@
-const XcertToken = artifacts.require("./XcertToken.sol");
+const XCTToken = artifacts.require("./XCTToken.sol");
 const assertRevert = require('../helpers/assertRevert');
 
-contract('XcertToken', (accounts) => {
+contract('XCTToken', (accounts) => {
   let token;
   let owner = accounts[0];
   let totalSupply = new web3.BigNumber('4e+26');
 
   beforeEach(async () => {
-    token = await XcertToken.new();
+    token = await XCTToken.new();
   });
 
   it('has correct totalSupply after construction', async () => {

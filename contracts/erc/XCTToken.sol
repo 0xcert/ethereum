@@ -12,7 +12,7 @@ import "../ownership/Ownable.sol";
  * - Token that can be irreversibly burned (destroyed).
  */
 
-contract XcertToken is Ownable {
+contract XCTToken is Ownable {
   using SafeMath for uint256;
 
   string public name;
@@ -68,7 +68,7 @@ contract XcertToken is Ownable {
   /**
    * @dev Contract constructor.
    */
-  function XcertToken()
+  function XCTToken()
     public
   {
     name = "0xcert Protocol Token";
