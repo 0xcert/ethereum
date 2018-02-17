@@ -13,24 +13,23 @@ import "../ownership/Ownable.sol";
  * - Deed that can be irreversibly burned (destroyed).
  * This deed is Ownable:
  * - The Ownable contract has an owner address, and provides basic authorization control
- *   functions, this simplifies the implementation of "user permissions".
+ * functions, this simplifies the implementation of "user permissions".
  */
 contract Xcert is Ownable {
-
   using SafeMath for uint256;
 
   /*
-  * @dev Total number of deeda
+  * @dev Total number of deeda.
   */
   uint256 private totalDeeds;
 
   /*
-   * @dev deed issuer name
+   * @dev Deed issuer name.
    */
   string private issuerName;
 
   /*
-   * @dev deed issuer symbol
+   * @dev Deed issuer symbol.
    */
   string private issuerSymbol;
 
@@ -40,7 +39,7 @@ contract Xcert is Ownable {
   mapping (uint256 => address) private idToOwner;
 
   /*
-   * @dev Mapping from deed ID to approved address
+   * @dev Mapping from deed ID to approved address.
    */
   mapping (uint256 => address) private idToApprovals;
 
@@ -50,7 +49,7 @@ contract Xcert is Ownable {
   mapping (uint256 => string) private idToUri;
 
   /*
-   * @dev Mapping from Owner address to list of his deed ids.
+   * @dev Mapping from owner address to list of his deed ids.
    */
   mapping (address => uint256[]) private ownerToList;
 
@@ -59,13 +58,37 @@ contract Xcert is Ownable {
    */
   mapping (uint256 => uint256) private idToIndex;
 
+  /**
+   * @dev This event emits when ownership of any deed changes by any mechanism. This event
+   * emits when deeds are created (`from` == 0) and destroyed (`to` == 0). During contract
+   * creation, any transfers may occur without emitting `Transfer`. At the time of any transfer,
+   * the "approved taker" is implicitly reset to the zero address.
+   * @param from The address sending a deed.
+   * @param to The address recieving a deed.
+   * @param deedId ID of the deed
+   */
+  event Transfer(address indexed from, address indexed to, uint256 indexed deedId);
+
+  /**
+   * @dev The Approve event emits to log the "approved taker" for a deed - whether set for
+   * the first time, reaffirmed by setting the same value, or setting to a new value. The
+   * "approved taker" is the zero address if nobody can take the deed now or it is an address
+   * if that address can call `takeOwnership` to attempt taking the deed. Any change to the
+   * "approved taker" for a deed SHALL cause Approve to emit. However, an exception, the
+   * Approve event will not emit when Transfer emits, this is because Transfer implicitly
+   * denotes the "approved taker" is reset to the zero address.
+   * @param from The address of an owner.
+   * @param to Address to be approved for the given deed ID.
+   * @param deedId ID of the token to be approved.
+   */
+  event Approval(address indexed from, address indexed to, uint256 indexed deedId);
+
   /*
-   * @dev Sets name and symbol of the deed issuer.
+   * @dev Contract constructor.
    * @param _name Name of the deed issuer.
    * @param _symbol Symbol of the deed issuer.
    */
-  function Xcert(string _name,
-                 string _symbol)
+  function Xcert(string _name, string _symbol)
     public
   {
     issuerName = _name;
@@ -73,7 +96,7 @@ contract Xcert is Ownable {
   }
 
   /*
-   * @dev Guarantees msg.sender is owner of the given deed.
+   * @dev Guarantees that the msg.sender is an owner of the given deed.
    * @param _deedId ID of the deed to validate its ownership belongs to msg.sender.
    */
   modifier onlyOwnerOf(uint256 _deedId) {
@@ -84,7 +107,6 @@ contract Xcert is Ownable {
   /*
    * @notice Find the owner of a deed.
    * @param _deedId The identifier for a deed we are inspecting.
-   * @return _owner Address of the deed owner.
    */
   function ownerOf(uint256 _deedId)
     public
@@ -96,8 +118,7 @@ contract Xcert is Ownable {
   }
 
   /*
-   * @notice Count deeds tracked by this contract.
-   * @return A count of valid deed tracked by this contract.
+   * @dev Returns the count of deeds tracked by this contract.
    */
   function countOfDeeds()
     external
@@ -108,9 +129,8 @@ contract Xcert is Ownable {
   }
 
   /*
-   * @notice Count all deeds assigent to an owner
+   * @dev Returns the count of all deeds assigent to owner.
    * @param _owner Address where we are interested in deeds owned by them.
-   * @return The number of deeds owned by `_owner`, possibly zero
    */
   function countOfDeedsByOwner(address _owner)
     public
@@ -122,14 +142,11 @@ contract Xcert is Ownable {
   }
 
   /*
-   * @notice Enumerate deeds assigned to an owner
+   * @dev Enumerate deeds assigned to an owner (sort order not specified).
    * @param _owner An address where we are interested in deed owned by them.
    * @param _index A counter less than `countOfDeedsByOwner(_owner)`.
-   * @return The identifier for the `_index`th deed assigned to `_owner`,
-   * (sort order not specified).
    */
-  function deedOfOwnerByIndex(address _owner,
-                              uint256 _index)
+  function deedOfOwnerByIndex(address _owner, uint256 _index)
     external
     view
     returns (uint256 _deedId)
@@ -144,8 +161,7 @@ contract Xcert is Ownable {
    * @param _to Address to be approved for the given deed ID.
    * @param _deedId ID of the token to be approved.
    */
-  function approve(address _to,
-                   uint256 _deedId)
+  function approve(address _to, uint256 _deedId)
     public
     onlyOwnerOf(_deedId)
   {
@@ -178,11 +194,11 @@ contract Xcert is Ownable {
   }
 
   /*
-   * @notice Set a new owner for your deed
+   * @dev Sets a new owner for your deed.
+   * @param _to Address of a new owner.
    * @param _deedId The deed that is being transferred.
    */
-  function transfer(address _to,
-                    uint256 _deedId)
+  function transfer(address _to, uint256 _deedId)
     onlyOwnerOf(_deedId)
     external
   {
@@ -198,9 +214,8 @@ contract Xcert is Ownable {
   }
 
    /*
-    * @dev Gets the approved address to take ownership of a given deed ID
+    * @dev Returns an address currently approved to take ownership of the given deed ID.
     * @param _deedId ID of the deed to query the approval of.
-    * @return Address currently approved to take ownership of the given deed ID.
     */
   function approvedFor(uint256 _deedId)
     public
@@ -211,11 +226,10 @@ contract Xcert is Ownable {
   }
 
   /*
-   * @dev Internal function to clear current approval of a given deed ID.
+   * @dev Clears the current approval of a given deed ID.
    * @param _tokenId ID of the deed to be transferred.
    */
-  function clearApproval(address _owner,
-                         uint256 _deedId)
+  function clearApproval(address _owner, uint256 _deedId)
     private
   {
     require(ownerOf(_deedId) == _owner);
@@ -224,16 +238,12 @@ contract Xcert is Ownable {
   }
 
   /*
-   * @dev Mint deed function.
+   * @dev Mints a new deed.
    * @param _to The address that will own the minted deed.
    * @param _id of the deed to be minted by the msg.sender.
-   * @param _uri that points to deed metadata (optional, max length 2083(max length that
-   * browsers accept)).
-   * @return Id of created deed.
+   * @param _uri that points to deed metadata (optional, max length 2083).
    */
-  function mint(address _to,
-                 uint256 _id,
-                 string _uri)
+  function mint(address _to, uint256 _id, string _uri)
     external
     onlyOwner()
   {
@@ -250,7 +260,7 @@ contract Xcert is Ownable {
   }
 
  /*
-  * @dev Burns specified Deed.
+  * @dev Burns a specified deed.
   * @param _deedId Id of the deed we want to burn.
   */
  function burn(uint256 _deedId)
@@ -269,12 +279,11 @@ contract Xcert is Ownable {
  }
 
  /*
-  * @dev Removes deed from owner.
+  * @dev Removes a deed from owner.
   * @param _from Address from wich we want to remove the deed.
   * @param _deedId Which deed we want to remove.
   */
- function removeDeed(address _from,
-                     uint256 _deedId)
+ function removeDeed(address _from, uint256 _deedId)
    private
  {
     require(idToOwner[_deedId] == _from);
@@ -294,12 +303,11 @@ contract Xcert is Ownable {
  }
 
  /*
-  * @dev Adds deed from owner.
+  * @dev Assignes a new deed to owner.
   * @param _To Address to wich we want to add the deed.
   * @param _deedId Which deed we want to add.
   */
- function addDeed(address _to,
-                  uint256 _deedId)
+ function addDeed(address _to, uint256 _deedId)
    private
  {
     require(idToOwner[_deedId] == address(0));
@@ -325,10 +333,7 @@ contract Xcert is Ownable {
   }
 
   /*
-   * @notice A descriptive name for a collection of deeds managed by this
-   * contract
-   * @dev Wallets and exchanges MAY display this to the end user.
-   * @return _name Name of the deed issuer.
+   * @dev Returns a descriptive name for a collection of deeds.
    */
   function name()
     external
@@ -339,9 +344,7 @@ contract Xcert is Ownable {
   }
 
   /*
-  * @notice An abbreviated name for deeds managed by this contract.
-  * @dev Wallets and exchanges MAY display this to the end user.
-  * @return _symbol Symbol of the deed issuer.
+  * @notice Returns nn abbreviated name for deeds.
   */
   function symbol()
     external
@@ -352,9 +355,8 @@ contract Xcert is Ownable {
   }
 
   /*
-   * @notice A distinct URI (RFC 3986) for a given token.
+   * @dev A distinct URI (RFC 3986) for a given deed.
    * @param _deedId Id for which we want uri.
-   * @return _deedUri Uri of the deed.
    */
   function deedUri(uint256 _deedId)
     external
@@ -366,9 +368,8 @@ contract Xcert is Ownable {
   }
 
   /*
-   * @notice helper function to calculate string length
-   * @dev Taken from: https://solidity.readthedocs.io/en/develop/frequently-asked-questions.html:
-   * string is basically identical to bytes only that it is assumed to hold the UTF-8 encoding
+   * @dev Calculates string length. This function is taken from https://goo.gl/dLgN7k.
+   * A string is basically identical to bytes only that it is assumed to hold the UTF-8 encoding
    * of a real string. Since string stores the data in UTF-8 encoding it is quite expensive to
    * compute the number of characters in the string (the encoding of some characters takes more than
    * a single byte). Because of that, string s; s.length is not yet supported and not even index
@@ -376,13 +377,9 @@ contract Xcert is Ownable {
    * bytes(s).length and bytes(s)[2] which will result in the number of bytes in the UTF-8 encoding
    * of the string (not the number of characters) and the second byte (not character) of the UTF-8
    * encoded string, respectively.
-   *
    * This function takes the bytes and shifts them to check value and calculate te appropriate
-   * length. Based on: https://ethereum.stackexchange.com/questions/13862/is-it-possible-to-check-str
-   * ing-variables-length-inside-the-contract/13886
-   *
-   * @param str string the utf string we want the length of
-   * @return length uint256 length of the string
+   * length. Details can be found at https://goo.gl/MzagzL.
+   * @param str UTF string we want the length of.
    */
   function utfStringLength(string str)
     internal
@@ -390,41 +387,22 @@ contract Xcert is Ownable {
     returns (uint256 length)
   {
     uint256 i = 0;
-    bytes memory string_rep = bytes(str);
+    bytes memory stringRep = bytes(str);
 
-    while (i < string_rep.length)
-    {
-      if (string_rep[i] >> 7 == 0)
-        i+=1;
-      else if (string_rep[i] >> 5 == 0x6)
-        i+=2;
-      else if (string_rep[i] >> 4 == 0xE)
-        i+=3;
-      else if (string_rep[i] >> 3 == 0x1E)
-        i+=4;
-      else
-          //For safety
-        i+=1;
-
+    while (i < stringRep.length) {
+      if (stringRep[i] >> 7 == 0) {
+        i += 1;
+      } else if (stringRep[i] >> 5 == 0x6) {
+        i += 2;
+      } else if (stringRep[i] >> 4 == 0xE) {
+        i += 3;
+      } else if (stringRep[i] >> 3 == 0x1E) {
+        i += 4;
+      } else {
+        i += 1;
+      }
       length++;
     }
   }
-
-  /// @dev This event emits when ownership of any deed changes by any
-  ///  mechanism. This event emits when deeds are created (`from` == 0) and
-  ///  destroyed (`to` == 0). Exception: during contract creation, any
-  ///  transfers may occur without emitting `Transfer`. At the time of any transfer,
-  ///  the "approved taker" is implicitly reset to the zero address.
-  event Transfer(address indexed from, address indexed to, uint256 indexed deedId);
-
-  /// @dev The Approve event emits to log the "approved taker" for a deed -- whether
-  ///  set for the first time, reaffirmed by setting the same value, or setting to
-  ///  a new value. The "approved taker" is the zero address if nobody can take the
-  ///  deed now or it is an address if that address can call `takeOwnership` to attempt
-  ///  taking the deed. Any change to the "approved taker" for a deed SHALL cause
-  ///  Approve to emit. However, an exception, the Approve event will not emit when
-  ///  Transfer emits, this is because Transfer implicitly denotes the "approved taker"
-  ///  is reset to the zero address.
-  event Approval(address indexed from, address indexed to, uint256 indexed deedId);
 
 }

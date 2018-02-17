@@ -16,10 +16,8 @@
   "author": "https://0xcert.org",
   "license": "MIT",
   "devDependencies": {
+    "ethjs-util": "0.1.4",
     "truffle": "4.0.6",
     "truffle-flattener": "1.2.0"
-  },
-  "dependencies": {
-    "ethjs-util": "^0.1.4"
   }
 }

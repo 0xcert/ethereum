@@ -7,6 +7,10 @@ import "./ownership/Ownable.sol";
  * @dev Migration contract.
  */
 contract Migrations is Ownable {
+
+  /**
+   * @dev Last migration number.
+   */
   uint public lastMigration;
 
   /**

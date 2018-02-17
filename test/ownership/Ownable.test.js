@@ -1,7 +1,7 @@
 const Ownable = artifacts.require('Ownable');
 const assertRevert = require('../helpers/assertRevert');
 
-contract('Ownable', (accounts) => {
+contract('ownership/Ownable', (accounts) => {
   let ownable;
 
   beforeEach(async () => {
@@ -31,4 +31,5 @@ contract('Ownable', (accounts) => {
     const originalOwner = await ownable.owner();
     await assertRevert(ownable.transferOwnership(null, { from: originalOwner }));
   });
+
 });

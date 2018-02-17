@@ -11,17 +11,47 @@ import "../ownership/Ownable.sol";
  * This token is burnable:
  * - Token that can be irreversibly burned (destroyed).
  */
-
 contract XCTToken is Ownable {
   using SafeMath for uint256;
 
+  /**
+   * Token name.
+   */
   string public name;
+
+  /**
+   * Token symbol.
+   */
   string public symbol;
+
+  /**
+   * Nubber of decimals.
+   */
   uint8 public decimals;
+
+  /**
+   * Ballance information map.
+   */
   mapping (address => uint256) internal balances;
+
+  /**
+   * Allowance information map.
+   */
   mapping (address => mapping (address => uint256)) internal allowed;
+
+  /**
+   * Number of tokens in circulation.
+   */
   uint256 internal currentSupply;
+
+  /**
+   * Initial number of tokens.
+   */
   uint256 public initialSupply;
+
+  /**
+   * Transfer feature state.
+   */
   bool public transferEnabled;
 
   /**
