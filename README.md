@@ -15,6 +15,12 @@ This is the official implementation of the 0xcert protocol for the Ethereum bloc
 
 * Run `npm run flatten` to merge the source code into a single file.
 
+## Credits
+
+* Kristijan Sedlak, *author*
+* Luka Kacil, *author*
+* Tadej Vengust, *author*
+
 ## License (MIT)
 
 ```
