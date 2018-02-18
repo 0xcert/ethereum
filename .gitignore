@@ -1,4 +1,6 @@
 .DS_Store
 .node*
 node_modules
-build/bundle.sol
+build/*
+!build/.keep
+
