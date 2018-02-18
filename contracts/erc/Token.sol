@@ -4,14 +4,11 @@ import "../math/SafeMath.sol";
 import "../ownership/Ownable.sol";
 
 /*
- * @title 0xcert protocol ERC20 token.
- * @dev XCert Token is a standard ERC20 token. This contract is based on 
- * - OpenZeppelin contracts: goo.gl/hkHBWk
- * - BeeToken Contract: goo.gl/QqZqDb
- * This token is burnable:
- * - Token that can be irreversibly burned (destroyed).
+ * @title Protocol token.
+ * @dev Standard ERC20 token used by the protocol. This contract follows the
+ * implementation at https://goo.gl/64yCkF. 
  */
-contract XCTToken is Ownable {
+contract Token is Ownable {
   using SafeMath for uint256;
 
   /**
@@ -35,11 +32,6 @@ contract XCTToken is Ownable {
   mapping (address => uint256) internal balances;
 
   /**
-   * Allowance information map.
-   */
-  mapping (address => mapping (address => uint256)) internal allowed;
-
-  /**
    * Number of tokens in circulation.
    */
   uint256 internal currentSupply;
@@ -50,36 +42,51 @@ contract XCTToken is Ownable {
   uint256 public initialSupply;
 
   /**
+   * Allowance information map.
+   */
+  mapping (address => mapping (address => uint256)) internal allowed;
+
+  /**
    * Transfer feature state.
    */
   bool public transferEnabled;
 
   /**
    * @dev An event which is triggered when funds are transfered.
-   * @param from The address sending tokens.
-   * @param to The address recieving tokens.
-   * @param value The amount of transferred tokens.
+   * @param _from The address sending tokens.
+   * @param _to The address recieving tokens.
+   * @param _value The amount of transferred tokens.
    */
-  event Transfer(address indexed from, address indexed to, uint256 value);
+  event Transfer(address indexed _from, address indexed _to, uint256 _value);
 
   /**
    * @dev An event which is triggered when an address to spend the specified amount of
    * tokens on behalf is approved.
-   * @param owner The address of an owner.
-   * @param spender The address which spent the funds.
-   * @param value The amount of spent tokens.
+   * @param _owner The address of an owner.
+   * @param _spender The address which spent the funds.
+   * @param _value The amount of spent tokens.
    */
-  event Approval(address indexed owner, address indexed spender, uint256 value);
+  event Approval(address indexed _owner, address indexed _spender, uint256 _value);
 
   /**
    * @dev An event which is triggered when tokens are burned.
-   * @param burner The address which burns tokens.
-   * @param value The amount of burned tokens.
+   * @param _burner The address which burns tokens.
+   * @param _value The amount of burned tokens.
    */
-  event Burn(address indexed burner, uint256 value);
+  event Burn(address indexed _burner, uint256 _value);
 
   /**
-   * @dev Checks if tokens can be transfered.
+   * @dev Assures that the provided address is a valid destination to transfer tokens to.
+   * @param _to Target address.
+   */
+  modifier validDestination(address _to) {
+    require(_to != address(0x0));
+    require(_to != address(this));
+    _;
+  }
+
+  /**
+   * @dev Assures that tokens can be transfered.
    */
   modifier onlyWhenTransferAllowed() {
     require(transferEnabled);
@@ -87,18 +94,9 @@ contract XCTToken is Ownable {
   }
 
   /**
-   * @dev Checks if the provided address is a valid destination to transfer tokens to.
-   */
-  modifier validDestination(address to) {
-    require(to != address(0x0));
-    require(to != address(this));
-    _;
-  }
-
-  /**
    * @dev Contract constructor.
    */
-  function XCTToken()
+  function Token()
     public
   {
     name = "0xcert Protocol Token";
@@ -115,16 +113,6 @@ contract XCTToken is Ownable {
   }
 
   /**
-   * @dev Enables token transfers.
-   */
-  function enableTransfer()
-    onlyOwner
-    external
-  {
-    transferEnabled = true;
-  }
-
-  /**
    * @dev Returns the total number of tokens in circulation. This function is based on BasicToken
    * implementation at goo.gl/GZEhaq.
    */
@@ -137,13 +125,12 @@ contract XCTToken is Ownable {
   }
 
   /**
-   * @dev Transfers tokens to a specified address. This function is based on BasicToken
-   * implementation at goo.gl/GZEhaq.
+   * @dev transfer token for a specified address
    * @param _to The address to transfer to.
    * @param _value The amount to be transferred.
    */
   function transfer(address _to, uint256 _value)
-    onlyWhenTransferAllowed
+    onlyWhenTransferAllowed()
     validDestination(_to)
     public
     returns (bool)
@@ -158,27 +145,13 @@ contract XCTToken is Ownable {
   }
 
   /**
-   * @dev Gets the balance of the specified address. This function is based on BasicToken
-   * implementation from goo.gl/GZEhaq.
-   * @param _owner The address to query for ballance.
-   */
-  function balanceOf(address _owner)
-    public
-    view
-    returns (uint256)
-  {
-    return balances[_owner];
-  }
-
-  /**
-   * @dev Transfers tokens from one address to another. This function is based on StandardToken
-   * implementation at goo.gl/GZEhaq.
-   * @param _from The address to send tokens from.
-   * @param _to The address to transfer to.
-   * @param _value The amount of tokens to transferred.
+   * @dev Transfer tokens from one address to another.
+   * @param _from address The address which you want to send tokens from.
+   * @param _to address The address which you want to transfer to.
+   * @param _value uint256 the amount of tokens to be transferred.
    */
   function transferFrom(address _from, address _to, uint256 _value)
-    onlyWhenTransferAllowed
+    onlyWhenTransferAllowed()
     validDestination(_to)
     public
     returns (bool)
@@ -192,6 +165,18 @@ contract XCTToken is Ownable {
 
     Transfer(_from, _to, _value);
     return true;
+  }
+
+  /**
+   * @dev Gets the balance of the specified address.
+   * @param _owner The address to query the the balance of.
+   */
+  function balanceOf(address _owner)
+    public
+    view
+    returns (uint256)
+  {
+    return balances[_owner];
   }
 
   /**
@@ -231,12 +216,22 @@ contract XCTToken is Ownable {
   }
 
   /**
+   * @dev Enables token transfers.
+   */
+  function enableTransfer()
+    onlyOwner()
+    external
+  {
+    transferEnabled = true;
+  }
+
+  /**
    * @dev Burns a specific amount of tokens. Only owner is allowed to perform this operation. This
    * function is based on BurnableToken implementation at goo.gl/GZEhaq.
    * @param _value The amount of token to be burned.
    */
   function burn(uint256 _value)
-    onlyOwner
+    onlyOwner()
     public
   {
     require(_value <= balances[msg.sender]);
