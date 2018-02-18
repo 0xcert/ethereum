@@ -165,6 +165,7 @@ contract Xcert is Ownable {
   function transfer(address _to, uint256 _deedId)
     onlyOwnerOf(_deedId)
     external
+    payable
   {
     address from = msg.sender;
     require(_to != address(0));
@@ -182,7 +183,8 @@ contract Xcert is Ownable {
    * @param _deedId ID of the deed being claimed by the msg.sender.
    */
   function takeOwnership(uint256 _deedId)
-    public
+    external
+    payable
   {
     address from = ownerOf(_deedId);
     address to = msg.sender;
@@ -203,7 +205,8 @@ contract Xcert is Ownable {
    * @param _deedId ID of the token to be approved.
    */
   function approve(address _to, uint256 _deedId)
-    public
+    external
+    payable
     onlyOwnerOf(_deedId)
   {
     address owner = ownerOf(_deedId);
