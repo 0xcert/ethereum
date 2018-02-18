@@ -4,11 +4,11 @@ import "../math/SafeMath.sol";
 import "../ownership/Ownable.sol";
 
 /*
- * @title Protocol token.
+ * @title XCT protocol token.
  * @dev Standard ERC20 token used by the protocol. This contract follows the
  * implementation at https://goo.gl/64yCkF. 
  */
-contract Token is Ownable {
+contract Xct is Ownable {
   using SafeMath for uint256;
 
   /**
@@ -35,11 +35,6 @@ contract Token is Ownable {
    * Number of tokens in circulation.
    */
   uint256 internal currentSupply;
-
-  /**
-   * Initial number of tokens.
-   */
-  uint256 public initialSupply;
 
   /**
    * Allowance information map.
@@ -96,19 +91,16 @@ contract Token is Ownable {
   /**
    * @dev Contract constructor.
    */
-  function Token()
+  function Xct()
     public
   {
     name = "0xcert Protocol Token";
     symbol = "XCT";
     decimals = 18;
-
-    initialSupply = 400000000000000000000000000;
-    currentSupply = initialSupply;
-    balances[owner] = currentSupply;
-
+    currentSupply = 400000000000000000000000000;
     transferEnabled = false;
 
+    balances[owner] = currentSupply;
     Transfer(address(0x0), owner, currentSupply);
   }
 
