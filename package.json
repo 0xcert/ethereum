@@ -10,7 +10,9 @@
     "test": "test"
   },
   "scripts": {
-    "flatten": "truffle-flattener contracts/*.sol >> build/bundle.sol",
+    "flatten:xct": "truffle-flattener contracts/tokens/Xct.sol >> build/Xct.bundle.sol",
+    "flatten:xcert": "truffle-flattener contracts/tokens/Xct.sol >> build/Xcert.bundle.sol",
+    "flatten": "npm run flatten:xct && npm run flatten:xcert",
     "test": "truffle test"
   },
   "author": "https://0xcert.org",
