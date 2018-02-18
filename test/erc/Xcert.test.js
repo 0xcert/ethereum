@@ -3,7 +3,6 @@ const util = require('ethjs-util');
 const assertRevert = require('../helpers/assertRevert');
 
 contract('erc/Xcert', (accounts) => {
-
   let xcert;
   let id1 = web3.sha3('test1');
   let id2 = web3.sha3('test2');
