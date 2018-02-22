@@ -223,9 +223,12 @@ contract Xcert is Ownable {
    * @param _id of the deed to be minted by the msg.sender.
    * @param _uri that points to deed metadata (optional, max length 2083).
    */
-  function mint(address _to, uint256 _id, string _uri)
+  function mint(address _to,
+                uint256 _id,
+                string _uri)
     external
     onlyOwner()
+    returns (bool)
   {
     require(_to != address(0));
     require(_id != 0);
@@ -237,6 +240,7 @@ contract Xcert is Ownable {
     totalDeeds = totalDeeds.add(1);
 
     Transfer(address(0), _to, _id);
+    return true;
   }
 
  /*
@@ -310,14 +314,14 @@ contract Xcert is Ownable {
   }
 
 
- /*
-  * @dev Removes a deed from owner.
-  * @param _from Address from wich we want to remove the deed.
-  * @param _deedId Which deed we want to remove.
-  */
- function removeDeed(address _from, uint256 _deedId)
+  /*
+   * @dev Removes a deed from owner.
+   * @param _from Address from wich we want to remove the deed.
+   * @param _deedId Which deed we want to remove.
+   */
+  function removeDeed(address _from, uint256 _deedId)
    private
- {
+  {
     require(idToOwner[_deedId] == _from);
 
     uint256 tokenIndex = idToIndex[_deedId];
@@ -332,23 +336,23 @@ contract Xcert is Ownable {
     ownerToList[_from].length--;
     delete idToIndex[_deedId];
     idToIndex[lastToken] = tokenIndex;
- }
+  }
 
- /*
-  * @dev Assignes a new deed to owner.
-  * @param _To Address to wich we want to add the deed.
-  * @param _deedId Which deed we want to add.
-  */
- function addDeed(address _to, uint256 _deedId)
-   private
- {
+  /*
+   * @dev Assignes a new deed to owner.
+   * @param _To Address to wich we want to add the deed.
+   * @param _deedId Which deed we want to add.
+   */
+  function addDeed(address _to, uint256 _deedId)
+    private
+  {
     require(idToOwner[_deedId] == address(0));
 
     idToOwner[_deedId] = _to;
     uint256 length = ownerToList[_to].length;
     ownerToList[_to].push(_deedId);
     idToIndex[_deedId] = length;
- }
+  }
 
   /*
    * @dev Gets all deed IDs of the specified address.
