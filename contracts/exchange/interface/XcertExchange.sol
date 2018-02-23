@@ -1,59 +1,61 @@
+pragma solidity ^0.4.19;
+
 /*
  * @dev based on: https://github.com/0xProject/contracts/blob/master/contracts/Exchange.sol
  */
- 
-interface XcertExchange {
+
+contract XcertExchange {
 
   event LogPerformTransfer(address _from,
                            address _to,
                            address _xcert,
-                           uint265 _xcertId,
+                           uint256 _xcertId,
                            address[] _feeRecipients,
-                           uint265[] _fees,
-                           uint265 _timestamp);
+                           uint256[] _fees,
+                           uint256 _timestamp);
 
   event LogCancelTransfer(address _from,
                           address _to,
                           address _xcert,
-                          uint265 _xcertId,
-                          uint265 _xcertTransferHash);
+                          uint256 _xcertId,
+                          uint256 _xcertTransferHash);
 
   event LogPerformMint(address _to,
                        address _xcert,
-                       uint265 _xcertId,
+                       uint256 _xcertId,
                        string _xcertUri,
                        address[] _feeRecipients,
-                       uint265[] _fees,
-                       uint265 _timestamp);
+                       uint256[] _fees,
+                       uint256 _timestamp);
 
   event LogCancelMint(address _to,
                       address _xcert,
-                      uint265 _xcertId,
+                      uint256 _xcertId,
                       string _xcertUri,
-                      uint265 _xcertMintHash);
+                      uint256 _xcertMintHash);
 
-  event LogError(uint8 indexed errorId, 
+  event LogError(uint8 indexed errorId,
                  bytes32 indexed orderHash);
 
   /*
    * @dev Sets XCT token address, Token proxy address and xcert Proxy address.
-   */
+   *//*
   function XcertExchange(address _xctToken,
                          address _tokenTransferProxy,
                          address _XcertProxy)
     public;
 
-  
+
   /*
    * @dev Makes the xcert transfer.
    */
   function performTransfer(address _from,
                            address _to,
                            address _xcert,
-                           uint265 _xcertId,
+                           uint256 _xcertId,
                            address[] _feeRecipients,
-                           uint265[] _fees,
-                           uint265 _timestamp,
+                           uint256[] _fees,
+                           uint256 _timestamp,
                            uint8 _v,
                            bytes32 _r,
                            bytes32 _s)
@@ -66,10 +68,10 @@ interface XcertExchange {
   function cancelTransfer(address _from,
                           address _to,
                           address _xcert,
-                          uint265 _xcertId,
+                          uint256 _xcertId,
                           address[] _feeRecipients,
-                          uint265[] _fees,
-                          uint265 _timestamp)
+                          uint256[] _fees,
+                          uint256 _timestamp)
     public
     returns(bool);
 
@@ -78,11 +80,11 @@ interface XcertExchange {
    */
   function performMint(address _to,
                        address _xcert,
-                       uint265 _xcertId,
+                       uint256 _xcertId,
                        string _xcertUri,
                        address[] _feeRecipients,
-                       uint265[] _fees,
-                       uint265 _timestamp,
+                       uint256[] _fees,
+                       uint256 _timestamp,
                        uint8 _v,
                        bytes32 _r,
                        bytes32 _s)
@@ -94,11 +96,11 @@ interface XcertExchange {
    */
   function cancelMint(address _to,
                       address _xcert,
-                      uint265 _xcertId,
+                      uint256 _xcertId,
                       string _xcertUri,
                       address[] _feeRecipients,
-                      uint265[] _fees,
-                      uint265 _timestamp)
+                      uint256[] _fees,
+                      uint256 _timestamp)
     public
     returns (bool);
 
@@ -107,11 +109,11 @@ interface XcertExchange {
    */
   function getMintDataHash(address _to,
                            address _xcert,
-                           uint265 _xcertId,
+                           uint256 _xcertId,
                            string _xcertUri,
                            address[] _feeRecipients,
-                           uint265[] _fees,
-                           uint265 _timestamp)  
+                           uint256[] _fees,
+                           uint256 _timestamp)
     public
     constant
     returns (bytes32);
@@ -123,10 +125,10 @@ interface XcertExchange {
   function getTransferDataHash(address _from,
                                address _to,
                                address _xcert,
-                               uint265 _xcertId,
+                               uint256 _xcertId,
                                address[] _feeRecipients,
-                               uint265[] _fees,
-                               uint265 _timestamp)  
+                               uint256[] _fees,
+                               uint256 _timestamp)
     public
     constant
     returns (bytes32);
@@ -139,7 +141,7 @@ interface XcertExchange {
                             uint8 _v,
                             bytes32 _r,
                             bytes32 _s)
-    public 
+    public
     constant
     returns (bool);
 
@@ -159,7 +161,7 @@ interface XcertExchange {
    * @dev Transfers xcert via proxy.
    */
   function _transferViaXcertProxy(address _xcert,
-                                  uint265 _id,
+                                  uint256 _id,
                                   address _to)
     internal
     returns (bool);
@@ -168,7 +170,7 @@ interface XcertExchange {
    * @dev Transfers xcert via proxy.
    */
   function _mintViaXcertProxy(address _xcert,
-                              uint265 _id,
+                              uint256 _id,
                               string _uri,
                               address _to)
     internal
@@ -177,7 +179,7 @@ interface XcertExchange {
 
   /*
    * @dev Checks if any xcert or token transfer will fail.
-   */
+   *//*
   function _isTransferable(TransferData _xcertTransfer)
     internal
     constant
@@ -185,7 +187,7 @@ interface XcertExchange {
 
   /*
    * @dev Checks if xcert is mintable and if any token transfer will fail.
-   */
+   *//*
   function _isMintable(MintData _xcertMint)
     internal
     constant
@@ -210,12 +212,12 @@ interface XcertExchange {
     constant  // The called token contract may attempt to change state, but will not be able to due to an added gas limit.
     returns (uint);
 
- 
+
   /*
    * @dev Checks if XcertProxy can transfer xcert.
    */
   function _isOperator(address _xcert,
-                       uint265 _xcertId)
+                       uint256 _xcertId)
     internal
     constant
     returns (bool);
