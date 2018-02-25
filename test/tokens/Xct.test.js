@@ -155,4 +155,28 @@ contract('tokens/Xct', (accounts) => {
     await assertRevert(token.burn(totalSupply.plus(1), { from: owner }));
   });
 
+  it('allows only owner to enable transfers', async () => {
+    let transfersState = await token.transferEnabled.call();
+    assert.strictEqual(transfersState, false);
+
+    await token.enableTransfer({ from: owner });
+
+    transfersState = await token.transferEnabled.call();
+    assert.strictEqual(transfersState, true);
+
+    await assertRevert(token.enableTransfer({ from: accounts[1] }));
+  });
+
+  it('allows only owner to disable transfers', async () => {
+    await token.enableTransfer({ from: owner });
+    let transfersState = await token.transferEnabled.call();
+    assert.strictEqual(transfersState, true);
+
+    await token.disableTransfer({ from: owner });
+
+    transfersState = await token.transferEnabled.call();
+    assert.strictEqual(transfersState, false);
+
+    await assertRevert(token.disableTransfer({ from: accounts[1] }));
+  });
 });

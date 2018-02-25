@@ -218,6 +218,16 @@ contract Xct is Ownable {
   }
 
   /**
+   * @dev Disables token transfers.
+   */
+  function disableTransfer()
+    onlyOwner()
+    external
+  {
+    transferEnabled = false;
+  }
+
+  /**
    * @dev Burns a specific amount of tokens. Only owner is allowed to perform this operation. This
    * function is based on BurnableToken implementation at goo.gl/GZEhaq.
    * @param _value The amount of token to be burned.
