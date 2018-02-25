@@ -1,7 +1,7 @@
 const Xct = artifacts.require('./Xct.sol');
 const assertRevert = require('../helpers/assertRevert');
 
-contract('erc/Xct', (accounts) => {
+contract('tokens/Xct', (accounts) => {
   let token;
   let owner = accounts[0];
   let totalSupply = new web3.BigNumber('4e+26');
