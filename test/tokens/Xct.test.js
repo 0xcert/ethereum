@@ -51,6 +51,12 @@ contract('tokens/Xct', (accounts) => {
     await assertRevert(token.transfer(token.address, 100));
   });
 
+  it('should throw an error when trying to transfer to crowdsale address', async () => {
+    await token.setCrowdsaleAllowance(accounts[1], 100);
+    await token.enableTransfer();
+    await assertRevert(token.transfer(accounts[1], 100));
+  });
+
   it('returns the correct allowance amount after approval', async () => {
     await token.approve(accounts[1], 100);
     let allowance = await token.allowance(owner, accounts[1]);
@@ -133,6 +139,13 @@ contract('tokens/Xct', (accounts) => {
     await assertRevert(token.transferFrom(owner, token.address, 100, { from: accounts[1] }));
   });
 
+  it('should throw an error when trying to transferFrom to crowdsale address', async () => {
+    await token.setCrowdsaleAllowance(accounts[2], 100);
+    await token.enableTransfer();
+    await token.approve(accounts[1], 100);
+    await assertRevert(token.transferFrom(owner, accounts[2], 100, { from: accounts[1] }));
+  });
+
   it('allows token burning by the owner', async () => {
     await token.enableTransfer();
     let { logs } = await token.burn(1, {from: owner});
@@ -179,4 +192,45 @@ contract('tokens/Xct', (accounts) => {
 
     await assertRevert(token.disableTransfer({ from: accounts[1] }));
   });
+
+  it('should set crowdsale address and allowance', async () => {
+    await token.setCrowdsaleAllowance(accounts[1], 100);
+    let actualCrowdsaleAddr = await token.crowdsaleAddress();
+    let actualAllowance = await token.allowance(owner, accounts[1]);
+    assert.equal(actualCrowdsaleAddr, accounts[1]);
+    assert.equal(actualAllowance.toNumber(), 100);
+  });
+
+  it('should set crowdsale address and allowance only if called by owner', async () => {
+    await assertRevert(token.setCrowdsaleAllowance(accounts[2], 100, {from: accounts[1]}));
+  });
+
+  it('should set crowdsale allowance only if bigger than zero', async () => {
+    await assertRevert(token.setCrowdsaleAllowance(accounts[1], 0));
+  });
+
+  it('should set crowdsale address and allowance only if transfers disabled', async () => {
+    await token.enableTransfer();
+    await assertRevert(token.setCrowdsaleAllowance(accounts[1], 100));
+  });
+
+  it('should allow transfers only to crowdsale address when transfers disabled', async () => {
+    await token.setCrowdsaleAllowance(accounts[1], 100);
+    await token.transferFrom(owner, accounts[2], 10, {from: accounts[1]});
+    let accountBalance = await token.balanceOf(accounts[2]);
+    assert.strictEqual(accountBalance.toString(), "10");
+    await assertRevert(token.transfer(accounts[3], 10, {from: accounts[2]}));
+  });
+
+  it('should allow transfers to anyone when transfers enabled', async () => {
+    await token.setCrowdsaleAllowance(accounts[1], 100);
+    await token.transferFrom(owner, accounts[2], 10, {from: accounts[1]});
+    let accountBalance = await token.balanceOf(accounts[2]);
+    assert.strictEqual(accountBalance.toString(), "10");
+    await token.enableTransfer();
+    await token.transfer(accounts[3], 9, {from: accounts[2]});
+    accountBalance = await token.balanceOf(accounts[3]);
+    assert.strictEqual(accountBalance.toString(), "9");
+  });
+
 });

@@ -6,7 +6,7 @@ import "../ownership/Ownable.sol";
 /*
  * @title XCT protocol token.
  * @dev Standard ERC20 token used by the protocol. This contract follows the
- * implementation at https://goo.gl/64yCkF. 
+ * implementation at https://goo.gl/64yCkF.
  */
 contract Xct is Ownable {
   using SafeMath for uint256;
@@ -47,6 +47,11 @@ contract Xct is Ownable {
   bool public transferEnabled;
 
   /**
+   * Crowdsale smart contract address.
+   */
+  address public crowdsaleAddress;
+
+  /**
    * @dev An event which is triggered when funds are transfered.
    * @param _from The address sending tokens.
    * @param _to The address recieving tokens.
@@ -77,6 +82,7 @@ contract Xct is Ownable {
   modifier validDestination(address _to) {
     require(_to != address(0x0));
     require(_to != address(this));
+    require(_to != address(crowdsaleAddress));
     _;
   }
 
@@ -84,7 +90,7 @@ contract Xct is Ownable {
    * @dev Assures that tokens can be transfered.
    */
   modifier onlyWhenTransferAllowed() {
-    require(transferEnabled);
+    require(transferEnabled || msg.sender == crowdsaleAddress);
     _;
   }
 
@@ -245,4 +251,21 @@ contract Xct is Ownable {
     Transfer(owner, address(0x0), _value);
   }
 
+  /**
+    * @dev Set crowdsale address to approve allowance for offering contract to distribute tokens.
+    *
+    * @param crowdsaleAddr Address of token offering contract
+    * @param amount Amount of tokens for the crowdsale.
+    */
+  function setCrowdsaleAllowance(address crowdsaleAddr,
+                                 uint256 amount)
+    external
+    onlyOwner
+  {
+    require(!transferEnabled);
+    require(amount > 0);
+
+    approve(crowdsaleAddr, amount);
+    crowdsaleAddress = crowdsaleAddr;
+  }
 }
