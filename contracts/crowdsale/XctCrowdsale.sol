@@ -139,7 +139,7 @@ contract XctCrowdsale is Ownable {
    * @return true if crowdsale event has ended
    */
   function hasEnded()
-    public
+    external
     view
     returns (bool)
   {
