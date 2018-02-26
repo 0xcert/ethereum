@@ -185,6 +185,7 @@ contract Xcert is Ownable {
   function takeOwnership(uint256 _deedId)
     external
     payable
+    returns (bool)
   {
     address from = ownerOf(_deedId);
     address to = msg.sender;
@@ -197,6 +198,7 @@ contract Xcert is Ownable {
     addDeed(to, _deedId);
 
     Transfer(from, to, _deedId);
+    return true;
   }
 
   /*

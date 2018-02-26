@@ -6,7 +6,7 @@ pragma solidity 0.4.19;
  */
 
 
-import "./interface/Xcert.sol";
+import "../tokens/Xcert.sol";
 import "../ownership/Ownable.sol";
 
 /// @title TokenTransferProxy - Transfers tokens on behalf of contracts that have been approved via decentralized governance.
@@ -76,7 +76,8 @@ contract XcertProxy is Ownable {
     onlyAuthorized
     returns (bool)
   {
-    return Xcert(_xcert).transfer(_to, _id);
+    return Xcert(_xcert).takeOwnership(_id);
+    //return Xcert(_xcert).transfer(_to, _id);
   }
 
   function mint(

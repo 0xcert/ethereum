@@ -2,8 +2,8 @@ pragma solidity ^0.4.19;
 
 
 import "../math/SafeMath.sol";
-import "./interface/Token.sol";
-import "./interface/Xcert.sol";
+import "../tokens/Xct.sol";
+import "../tokens/Xcert.sol";
 import "./TokenTransferProxy.sol";
 import "./XcertProxy.sol";
 
@@ -59,35 +59,6 @@ contract XcertExchange {
   mapping(bytes32 => bool) public mintPerformed;
 
   /*
-   * @dev Structure of all transfer data.
-   */
-  struct TransferData {
-    address from;
-    address to;
-    address xcert;
-    uint256 xcertId;
-    address[] feeRecipients;
-    uint256[] fees;
-    uint256 timestamp;
-    bytes32 hash;
-  }
-
-  /*
-   * @dev Structure of all mint data.
-   */
-  struct MintData {
-    address from;
-    address to;
-    address xcert;
-    uint256 xcertId;
-    string xcertUri;
-    address[] feeRecipients;
-    uint256[] fees;
-    uint256 timestamp;
-    bytes32 hash;
-  }
-
-  /*
    * @dev This event emmits when xcert changes ownership.
    */
   event LogPerformTransfer(address _from,
@@ -106,6 +77,9 @@ contract XcertExchange {
                           address _to,
                           address _xcert,
                           uint256 _xcertId,
+                          address[] _feeRecipients,
+                          uint256[] _fees,
+                          uint256 _timestamp,
                           bytes32 _xcertTransferHash);
 
   /*
@@ -127,6 +101,9 @@ contract XcertExchange {
                       address _xcert,
                       uint256 _xcertId,
                       string _xcertUri,
+                      address[] _feeRecipients,
+                      uint256[] _fees,
+                      uint256 _timestamp,
                       bytes32 _xcertMintHash);
 
   /*
@@ -163,6 +140,7 @@ contract XcertExchange {
    * @param _v ECDSA signature parameter v.
    * @param _r ECDSA signature parameters r.
    * @param _s ECDSA signature parameters s.
+   * @param _s _throwIfNotTransferable Test the transfer before performing.
    */
   function performTransfer(address _from,
                            address _to,
@@ -173,57 +151,63 @@ contract XcertExchange {
                            uint256 _timestamp,
                            uint8 _v,
                            bytes32 _r,
-                           bytes32 _s)
+                           bytes32 _s,
+                           bool _throwIfNotTransferable)
     public
     returns (bool)
   {
-    TransferData memory transferData = TransferData({
-      from: _from,
-      to: _to,
-      xcert: _xcert,
-      xcertId: _xcertId,
-      feeRecipients: _feeRecipients,
-      fees: _fees,
-      timestamp: _timestamp,
-      hash: getTransferDataHash(_from, _to, _xcert, _xcertId, _feeRecipients, _fees, _timestamp)
-    });
-
-    require(transferData.feeRecipients.length == transferData.fees.length);
+    require(_feeRecipients.length == _fees.length);
     require(_to == msg.sender);
     require(_from != _to);
+
+    bytes32 hash = getTransferDataHash(
+      _from,
+      _to,
+      _xcert,
+      _xcertId,
+      _feeRecipients,
+      _fees,
+      _timestamp
+    );
+
     require(isValidSignature(
-      transferData.from,
-      transferData.hash,
+      _from,
+      hash,
       _v,
       _r,
       _s
     ));
 
-    if(transferPerformed[transferData.hash])
+    if(transferPerformed[hash])
     {
-      LogError(uint8(Errors.TRANSFER_ALREADY_PERFORMED), transferData.hash);
+      LogError(uint8(Errors.TRANSFER_ALREADY_PERFORMED), hash);
       return false;
     }
 
-    if(transferCancelled[transferData.hash])
+    if(transferCancelled[hash])
     {
-      LogError(uint8(Errors.TRANSFER_CANCELLED), transferData.hash);
+      LogError(uint8(Errors.TRANSFER_CANCELLED), hash);
       return false;
     }
 
-    // TODO(Tadej): check if we need shouldThrowOnInsufficientBalanceOrAllowance: Test if transfer will fail before attempting. Or always test (gas cost?)-
-    if (_isTransferable(transferData)) {
-      LogError(uint8(Errors.INSUFFICIENT_BALANCE_OR_ALLOWANCE), transferData.hash);
-      return false;
+    if (_throwIfNotTransferable)
+    {
+      if(!_canPayFee(_to, _fees))
+      {
+        LogError(uint8(Errors.INSUFFICIENT_BALANCE_OR_ALLOWANCE), hash);
+        return false;
+      }
+
+      if(!_isAllowed(_from, _xcert, _xcertId))
+      {
+        LogError(uint8(Errors.NOT_XCERT_OWNER), hash);
+        return false;
+      }
     }
 
-    transferPerformed[transferData.hash] = true;
+    transferPerformed[hash] = true;
 
-    require(_transferViaXcertProxy(
-      transferData.xcert,
-      transferData.xcertId,
-      transferData.to
-    ));
+    require(_transferViaXcertProxy(_xcert, _xcertId, _to));
 
     for(uint256 i; i < _feeRecipients.length; i++)
     {
@@ -231,7 +215,7 @@ contract XcertExchange {
       {
         require(_transferViaTokenTransferProxy(
           XCT_TOKEN_CONTRACT,
-          transferData.from,
+          _to,
           _feeRecipients[i],
           _fees[i]
         ));
@@ -239,14 +223,170 @@ contract XcertExchange {
     }
 
     LogPerformTransfer(
-      transferData.from,
-      transferData.to,
-      transferData.xcert,
-      transferData.xcertId,
-      transferData.feeRecipients,
-      transferData.fees,
-      transferData.timestamp,
-      transferData.hash
+      _from,
+      _to,
+      _xcert,
+      _xcertId,
+      _feeRecipients,
+      _fees,
+      _timestamp,
+      hash
+    );
+
+    return true;
+  }
+
+  /*
+   * @dev Cancels xcert transfer.
+   * @param _from Address of Xcert sender.
+   * @param _to Address of Xcert reciever.
+   * @param _xcert Address of Xcert contract.
+   * @param _xcertId Id of Xcert (hashed certificate data that is transformed into uint256).
+   * @param _feeRecipients Addresses of all parties that need to get fees paid.
+   * @param _fees Fee amounts of all the _feeRecipients (length of both have to be the same).
+   * @param _timestamp Timestamp that represents the salt.
+   */
+  function cancelTransfer(address _from,
+                          address _to,
+                          address _xcert,
+                          uint256 _xcertId,
+                          address[] _feeRecipients,
+                          uint256[] _fees,
+                          uint256 _timestamp)
+    public
+  {
+    require(msg.sender == _from);
+
+    bytes32 hash = getTransferDataHash(
+      _from,
+      _to,
+      _xcert,
+      _xcertId,
+      _feeRecipients,
+      _fees,
+      _timestamp
+    );
+
+    require(!transferPerformed[hash]);
+
+    transferCancelled[hash] = true;
+
+    LogCancelTransfer(
+      _from,
+      _to,
+      _xcert,
+      _xcertId,
+      _feeRecipients,
+      _fees,
+      _timestamp,
+      hash
+    );
+  }
+
+  /*
+   * @dev Performs Xcert mint directly to the taker.
+   * @param _to Address of Xcert reciever.
+   * @param _xcert Address of Xcert contract.
+   * @param _xcertId Id of Xcert (hashed certificate data that is transformed into uint256).
+   * @param _xcertId Uri of Xcert (metadata uri).
+   * @param _feeRecipients Addresses of all parties that need to get fees paid.
+   * @param _fees Fee amounts of all the _feeRecipients (length of both have to be the same).
+   * @param _timestamp Timestamp that represents the salt.
+   * @param _v ECDSA signature parameter v.
+   * @param _r ECDSA signature parameters r.
+   * @param _s ECDSA signature parameters s.
+   * @param _s _throwIfNotMintable Test the mint before performing.
+   */
+  function performMint(address _to,
+                       address _xcert,
+                       uint256 _xcertId,
+                       string _xcertUri,
+                       address[] _feeRecipients,
+                       uint256[] _fees,
+                       uint256 _timestamp,
+                       uint8 _v,
+                       bytes32 _r,
+                       bytes32 _s,
+                       bool _throwIfNotMintable)
+    public
+    returns (bool)
+  {
+    require(_feeRecipients.length == _fees.length);
+    require(_to == msg.sender);
+
+    //TODO(Tadej): _getOwner function
+    //address owner = _getOwner(_xcert);
+    address owner = address(0);
+    require(owner != _to);
+
+    bytes32 hash = getMintDataHash(
+      _to,
+      _xcert,
+      _xcertId,
+      _xcertUri,
+      _feeRecipients,
+      _fees,
+      _timestamp
+    );
+
+    require(isValidSignature(
+      owner,
+      hash,
+      _v,
+      _r,
+      _s
+    ));
+
+    if(mintPerformed[hash])
+    {
+      LogError(uint8(Errors.MINT_ALREADY_PERFORMED), hash);
+      return false;
+    }
+
+    if(mintCancelled[hash])
+    {
+      LogError(uint8(Errors.MINT_CANCELLED), hash);
+      return false;
+    }
+
+    if (_throwIfNotMintable)
+    {
+      if(!_canPayFee(_to, _fees))
+      {
+        LogError(uint8(Errors.INSUFFICIENT_BALANCE_OR_ALLOWANCE), hash);
+        return false;
+      }
+
+      //TODO(Tadej): Check if we can mint
+    }
+
+    mintPerformed[hash] = true;
+
+    //require(_mintViaXcertProxy(_xcert, _xcertId, _xcertUri, _to));
+
+  /*  for(uint256 i; i < _feeRecipients.length; i++)
+    {
+      if(_feeRecipients[i] != address(0) && _fees[i] > 0)
+      {
+        require(_transferViaTokenTransferProxy(
+          XCT_TOKEN_CONTRACT,
+          _to,
+          _feeRecipients[i],
+          _fees[i]
+        ));
+      }
+    }
+    */
+
+    LogPerformMint(
+      _to,
+      _xcert,
+      _xcertId,
+      _xcertUri,
+      _feeRecipients,
+      _fees,
+      _timestamp,
+      hash
     );
 
     return true;
@@ -347,19 +487,27 @@ contract XcertExchange {
     );
   }
 
-  /*
-   * @dev Checks if any xcert or token transfer will fail.
-   * @param _xcertTransfer All transfer data.
-   */
-  function _isTransferable(TransferData _xcertTransfer)
+  function _canPayFee(address _to,
+                      uint256[] _fees)
     internal
     constant
     returns (bool)
   {
-    //TODO(Tadej): implement the method.
+    uint256 feeSum = 0;
 
+    for(uint256 i; i < _fees.length; i++)
+    {
+      feeSum = feeSum.add(_fees[i]);
+    }
+
+    if(_getBalance(XCT_TOKEN_CONTRACT, _to) < feeSum
+      || _getAllowance(XCT_TOKEN_CONTRACT, _to) < feeSum )
+    {
+      return false;
+    }
     return true;
   }
+
 
 
   /*
@@ -377,7 +525,12 @@ contract XcertExchange {
     internal
     returns (bool)
   {
-    return TokenTransferProxy(TOKEN_TRANSFER_PROXY_CONTRACT).transferFrom(_token, _from, _to, _value);
+    return TokenTransferProxy(TOKEN_TRANSFER_PROXY_CONTRACT).transferFrom(
+      _token,
+      _from,
+      _to,
+      _value
+    );
   }
 
 
@@ -428,7 +581,7 @@ contract XcertExchange {
     constant
     returns (uint)
   {
-    return Token(_token).balanceOf.gas(EXTERNAL_QUERY_GAS_LIMIT)(_owner);
+    return Xct(_token).balanceOf.gas(EXTERNAL_QUERY_GAS_LIMIT)(_owner);
   }
 
   /*
@@ -445,17 +598,22 @@ contract XcertExchange {
     constant
     returns (uint)
   {
-    return Token(_token).allowance.gas(EXTERNAL_QUERY_GAS_LIMIT)(
+    return Xct(_token).allowance.gas(EXTERNAL_QUERY_GAS_LIMIT)(
       _owner,
       TOKEN_TRANSFER_PROXY_CONTRACT
     );
   }
 
   /*
-   * @dev Checks if XcertProxy can transfer xcert.
+   * @dev Checks if we can transfer xcert.
+   * @param _from Address of Xcert sender.
+   * @param _xcert Address of Xcert contract.
+   * @param _xcertId Id of Xcert (hashed certificate data that is transformed into uint256).
+   + @return Permission if we can transfer xcert.
    */
-  function _isAllowed(address _xcert,
-                       uint256 _xcertId)
+  function _isAllowed(address _from,
+                      address _xcert,
+                      uint256 _xcertId)
     internal
     constant
     returns (bool)
@@ -479,7 +637,7 @@ contract XcertExchange {
   }
 
   /*
-   * @dev Gets xcert owner.
+   * @dev Gets xcert contract owner.
    *//*
   function _getOwner(address _xcert)
     internal

@@ -18,7 +18,7 @@
 
 pragma solidity 0.4.19;
 
-import "./interface/Token.sol";
+import "../tokens/Xct.sol";
 import "../ownership/Ownable.sol";
 
 /// @title TokenTransferProxy - Transfers tokens on behalf of contracts that have been approved via decentralized governance.
@@ -96,7 +96,7 @@ contract TokenTransferProxy is Ownable {
         onlyAuthorized
         returns (bool)
     {
-        return Token(token).transferFrom(from, to, value);
+        return Xct(token).transferFrom(from, to, value);
     }
 
     /*
