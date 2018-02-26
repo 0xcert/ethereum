@@ -127,9 +127,8 @@ contract XctCrowdsale is Ownable {
 
     weiRaised = weiRaised.add(weiAmount);
 
-    if (!token.transferFrom(token.owner(), beneficiary, tokens)) {
-      revert();
-    }
+    require(token.transferFrom(token.owner(), beneficiary, tokens));
+
     TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
 
     forwardFunds();
