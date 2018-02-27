@@ -170,17 +170,17 @@ contract XctVesting is Ownable {
       currentRate = vestingRates[role][currentStage];
     }
 
-    // TODO(luka): we could save beneficiary state before we revert to avoid repeating while loops
-    // in the future.
-    require(currentRate > 0);
-
     bool isLastStage = currentStage == vestingTimestamps.length - 1;
     uint256 tokensToWithdraw;
     // Withdraw the remainder which could include truncated quotients from previous divisions.
     if (isLastStage) {
+      require(beneficiary.remainingAmount > 0);
       tokensToWithdraw = beneficiary.remainingAmount;
     }
     else {
+      // TODO(luka): we could save beneficiary state before we revert to avoid repeating while loops
+      // in the future.
+      require(currentRate > 0);
       tokensToWithdraw = beneficiary.totalAmount.mul(currentRate).div(10 ** rateDecimals);
     }
 
