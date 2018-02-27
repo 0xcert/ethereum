@@ -113,6 +113,21 @@ contract XcertExchange {
                  bytes32 indexed orderHash);
 
   /*
+   * @dev Structure of data needed for mint.
+   */
+  struct MintData{
+    address owner;
+    address to;
+    address xcert;
+    uint256 xcertId;
+    string xcertUri;
+    address[] feeRecipients;
+    uint256[] fees;
+    uint256 timestamp;
+    bytes32 hash;
+  }
+
+  /*
    * @dev Sets XCT token address, Token proxy address and xcert Proxy address.
    * @param _xcertToken Address pointing to XCT Token contract.
    * @param _tokenTransferProxy Address pointing to TokenTransferProxy contract.
@@ -209,18 +224,7 @@ contract XcertExchange {
 
     require(_transferViaXcertProxy(_xcert, _xcertId, _to));
 
-    for(uint256 i; i < _feeRecipients.length; i++)
-    {
-      if(_feeRecipients[i] != address(0) && _fees[i] > 0)
-      {
-        require(_transferViaTokenTransferProxy(
-          XCT_TOKEN_CONTRACT,
-          _to,
-          _feeRecipients[i],
-          _fees[i]
-        ));
-      }
-    }
+    _payFees(_feeRecipients, _fees, _to);
 
     LogPerformTransfer(
       _from,
@@ -311,13 +315,108 @@ contract XcertExchange {
     public
     returns (bool)
   {
+
+    MintData memory mintData = MintData({
+      owner: _getOwner(_xcert),
+      to: _to,
+      xcert: _xcert,
+      xcertId: _xcertId,
+      xcertUri: _xcertUri,
+      feeRecipients: _feeRecipients,
+      fees: _fees,
+      timestamp: _timestamp,
+      hash: getMintDataHash(
+        _to,
+        _xcert,
+        _xcertId,
+        _xcertUri,
+        _feeRecipients,
+        _fees,
+        _timestamp
+      )
+    });
+
     require(_feeRecipients.length == _fees.length);
     require(_to == msg.sender);
+    require(mintData.owner != _to);
 
-    //TODO(Tadej): _getOwner function
-    //address owner = _getOwner(_xcert);
-    address owner = address(0);
-    require(owner != _to);
+    require(isValidSignature(
+      mintData.owner,
+      mintData.hash,
+      _v,
+      _r,
+      _s
+    ));
+
+    if(mintPerformed[mintData.hash])
+    {
+      LogError(uint8(Errors.MINT_ALREADY_PERFORMED), mintData.hash);
+      return false;
+    }
+
+    if(mintCancelled[mintData.hash])
+    {
+      LogError(uint8(Errors.MINT_CANCELLED), mintData.hash);
+      return false;
+    }
+
+    if (_throwIfNotMintable)
+    {
+      if(!_canPayFee(_to, _fees))
+      {
+        LogError(uint8(Errors.INSUFFICIENT_BALANCE_OR_ALLOWANCE), mintData.hash);
+        return false;
+      }
+
+      //TODO(Tadej): Check if we can mint
+      if(_canMint(_xcert))
+      {
+        LogError(uint8(Errors.NOT_XCERT_OWNER), mintData.hash);
+        return false;
+      }
+    }
+
+    mintPerformed[mintData.hash] = true;
+
+    require(_mintViaXcertProxy(mintData));
+
+    _payFees(_feeRecipients, _fees, _to);
+
+    LogPerformMint(
+      _to,
+      _xcert,
+      _xcertId,
+      _xcertUri,
+      _feeRecipients,
+      _fees,
+      _timestamp,
+      mintData.hash
+    );
+
+    return true;
+  }
+
+
+  /*
+   * @dev Cancels xcert mint.
+   * @param _to Address of Xcert reciever.
+   * @param _xcert Address of Xcert contract.
+   * @param _xcertId Id of Xcert (hashed certificate data that is transformed into uint256).
+   * @param _xcertId Uri of Xcert (metadata uri).
+   * @param _feeRecipients Addresses of all parties that need to get fees paid.
+   * @param _fees Fee amounts of all the _feeRecipients (length of both have to be the same).
+   * @param _timestamp Timestamp that represents the salt.
+   */
+  function cancelMint(address _to,
+                      address _xcert,
+                      uint256 _xcertId,
+                      string _xcertUri,
+                      address[] _feeRecipients,
+                      uint256[] _fees,
+                      uint256 _timestamp)
+    public
+  {
+    require(msg.sender == _getOwner(_xcert));
 
     bytes32 hash = getMintDataHash(
       _to,
@@ -329,56 +428,11 @@ contract XcertExchange {
       _timestamp
     );
 
-    require(isValidSignature(
-      owner,
-      hash,
-      _v,
-      _r,
-      _s
-    ));
+    require(!mintPerformed[hash]);
 
-    if(mintPerformed[hash])
-    {
-      LogError(uint8(Errors.MINT_ALREADY_PERFORMED), hash);
-      return false;
-    }
+    mintCancelled[hash] = true;
 
-    if(mintCancelled[hash])
-    {
-      LogError(uint8(Errors.MINT_CANCELLED), hash);
-      return false;
-    }
-
-    if (_throwIfNotMintable)
-    {
-      if(!_canPayFee(_to, _fees))
-      {
-        LogError(uint8(Errors.INSUFFICIENT_BALANCE_OR_ALLOWANCE), hash);
-        return false;
-      }
-
-      //TODO(Tadej): Check if we can mint
-    }
-
-    mintPerformed[hash] = true;
-
-    //require(_mintViaXcertProxy(_xcert, _xcertId, _xcertUri, _to));
-
-  /*  for(uint256 i; i < _feeRecipients.length; i++)
-    {
-      if(_feeRecipients[i] != address(0) && _fees[i] > 0)
-      {
-        require(_transferViaTokenTransferProxy(
-          XCT_TOKEN_CONTRACT,
-          _to,
-          _feeRecipients[i],
-          _fees[i]
-        ));
-      }
-    }
-    */
-
-    LogPerformMint(
+    LogCancelMint(
       _to,
       _xcert,
       _xcertId,
@@ -388,10 +442,7 @@ contract XcertExchange {
       _timestamp,
       hash
     );
-
-    return true;
   }
-
 
   /*
    * @dev Calculates keccak-256 hash of mint data from parameters.
@@ -487,6 +538,12 @@ contract XcertExchange {
     );
   }
 
+  /*
+   * @dev Check is payer can pay the fees.
+   * @param _to Address of the payer.
+   * @param_ fees All the fees to be payed.
+   * @return Confirmation if fees can be payed.
+   */
   function _canPayFee(address _to,
                       uint256[] _fees)
     internal
@@ -557,14 +614,11 @@ contract XcertExchange {
    * @param _to Address receiving Xcert.
    * @return Success of Xcert mint.
    */
-  function _mintViaXcertProxy(address _xcert,
-                              uint256 _id,
-                              string _uri,
-                              address _to)
+  function _mintViaXcertProxy(MintData _mintData)
     internal
     returns (bool)
   {
-    return XcertProxy(XCERT_PROXY_CONTRACT).mint(_xcert,_id, _uri, _to);
+    return XcertProxy(XCERT_PROXY_CONTRACT).mint(_mintData.xcert, _mintData.xcertId, _mintData.xcertUri, _mintData.to);
   }
 
   /*
@@ -623,6 +677,45 @@ contract XcertExchange {
     return true;
   }
 
+  /**
+   * @dev TODO!
+   */
+  function _canMint(address _xcert)
+    internal
+    constant
+    returns (bool)
+  {
+    //TODO(Tadej): implement the method.
+    //Xcert(_xcert)
+    return true;
+  }
+
+  /**
+   * @dev Helper function that pays all the fees.
+   * @param _feeRecipients Addresses of all parties that need to get fees paid.
+   * @param _fees Fee amounts of all the _feeRecipients (length of both have to be the same).
+   * @param _to Address of the fee payer.
+   * @return Success of payments.
+   */
+  function _payFees(address[] _feeRecipients,
+                    uint256[] _fees,
+                    address _to)
+    internal
+  {
+    for(uint256 i; i < _feeRecipients.length; i++)
+    {
+      if(_feeRecipients[i] != address(0) && _fees[i] > 0)
+      {
+        require(_transferViaTokenTransferProxy(
+          XCT_TOKEN_CONTRACT,
+          _to,
+          _feeRecipients[i],
+          _fees[i]
+        ));
+      }
+    }
+  }
+
   /*
    * @dev Checks if XcertProxy can mint xcerts.
    */
@@ -638,12 +731,13 @@ contract XcertExchange {
 
   /*
    * @dev Gets xcert contract owner.
-   *//*
+   * @param _xcert Contract address.
+   */
   function _getOwner(address _xcert)
     internal
     constant
     returns (address)
   {
-    return Ownable(_xcert).owner;
-  }*/
+    return Xcert(_xcert).owner();
+  }
 }
