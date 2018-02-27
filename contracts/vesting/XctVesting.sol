@@ -24,8 +24,15 @@ contract XctVesting is Ownable {
 
   // TODO(luka): this is just an approximation.
   uint256 private months = 30 days;
+
+  /**
+   * Number of decimals for vesting rates.
+   */
   uint256 private rateDecimals = 3;
 
+  /**
+   * An array of vesting stages (timestamps).
+   */
   uint256[10] public vestingTimestamps;
 
   mapping(uint256 => uint256[]) public vestingRates;
@@ -40,6 +47,9 @@ contract XctVesting is Ownable {
     Roles role;
   }
 
+  /**
+   * Mapping from an address to a vesting member.
+   */
   mapping(address => Member) public members;
 
   function XctVesting(address _tokenAddress, uint256 _icoStartTime)
@@ -103,6 +113,12 @@ contract XctVesting is Ownable {
     assert(vestingRates[uint(Roles.Advisor)].length == vestingTimestamps.length);
   }
 
+  /**
+   * @dev Add a member to the vesting contract
+   * @param addr Member's address.
+   * @param amount Amount of tokens to vest.
+   * @param role Member's role.
+   */
   function addMember(address addr, uint256 amount, string role)
     onlyOwner()
     external
@@ -127,6 +143,9 @@ contract XctVesting is Ownable {
     return true;
   }
 
+  /**
+   * @dev Withdraw vested tokens.
+   */
   function withdraw()
     external
   {
