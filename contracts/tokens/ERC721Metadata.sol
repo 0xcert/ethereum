@@ -1,12 +1,14 @@
+pragma solidity ^0.4.10;
+
 /// @title ERC-721 Non-Fungible Token Standard, optional metadata extension
 /// @dev See https://github.com/ethereum/EIPs/blob/master/EIPS/eip-721.md
 ///  Note: the ERC-165 identifier for this interface is 0xTODO_ADD_THIS
 interface ERC721Metadata /* is ERC721 */ {
     /// @notice A descriptive name for a collection of NFTs in this contract
-    function name() external pure returns (string _name);
+    function name() external view returns (string _name);
 
     /// @notice An abbreviated name for NFTs in this contract
-    function symbol() external pure returns (string _symbol);
+    function symbol() external view returns (string _symbol);
 
     /// @notice A distinct Uniform Resource Identifier (URI) for a given asset.
     /// @dev Throws if `_tokenId` is not a valid NFT. URIs are defined in RFC

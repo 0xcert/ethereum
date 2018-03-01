@@ -2,228 +2,342 @@ pragma solidity ^0.4.19;
 
 import "../math/SafeMath.sol";
 import "../ownership/Ownable.sol";
+import "./ERC721.sol";
+import "./ERC721Metadata.sol";
+import "./ERC165.sol";
+import "./ERC721TokenReceiver.sol";
 
 /*
- * @title Deed token.
+ * @title None-fungable token.
  * @dev Xcert is an implementation of EIP721 and EIP721Metadata. This contract follows
  * the implementation at goo.gl/FLaJc9.
  */
-contract Xcert is Ownable {
+contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
   using SafeMath for uint256;
 
   /*
-   * @dev Deed issuer name.
+   * @dev NFToken issuer name.
    */
   string private issuerName;
 
   /*
-   * @dev Deed issuer symbol.
+   * @dev NFToken issuer symbol.
    */
   string private issuerSymbol;
 
   /*
-   * @dev Total number of deeds.
-   */
-  uint256 private totalDeeds;
-
-  /*
-   * @dev A mapping from deed ID to the address that owns it.
+   * @dev A mapping from NFToken ID to the address that owns it.
    */
   mapping (uint256 => address) private idToOwner;
 
   /*
-   * @dev Mapping from deed ID to approved address.
+   * @dev Mapping from NFToken ID to approved address.
    */
   mapping (uint256 => address) private idToApprovals;
 
   /*
-   * @dev Mapping from owner address to list of his deed ids.
+   * @dev Mapping from owner address to count of his tokens.
    */
-  mapping (address => uint256[]) private ownerToList;
+  mapping (address => uint256) private ownerToNFTokenCount;
 
   /*
-   * @dev Mapping from deed ID to its index in ownerToList.
+   * @dev Mapping from owner address to mapping of operator addresses.
    */
-  mapping (uint256 => uint256) private idToIndex;
+  mapping (address => mapping (address => bool)) private ownerToOperators;
 
   /*
-   * @dev Mapping from deed ID to metadata uri.
+   * @dev Mapping from NFToken ID to metadata uri.
    */
   mapping (uint256 => string) private idToUri;
 
-  /**
-   * @dev This event emits when ownership of any deed changes by any mechanism. This event
-   * emits when deeds are created (`from` == 0) and destroyed (`to` == 0). During contract
-   * creation, any transfers may occur without emitting `Transfer`. At the time of any transfer,
-   * the "approved taker" is implicitly reset to the zero address.
-   * @param _from The address sending a deed.
-   * @param _to The address recieving a deed.
-   * @param _deedId ID of the deed
+  /*
+   * @dev Mapping of supported intefraces.
+   * You must not set element 0xffffffff to true.
    */
-  event Transfer(address indexed _from, address indexed _to, uint256 indexed _deedId);
-
-  /**
-   * @dev The Approve event emits to log the "approved taker" for a deed - whether set for
-   * the first time, reaffirmed by setting the same value, or setting to a new value. The
-   * "approved taker" is the zero address if nobody can take the deed now or it is an address
-   * if that address can call `takeOwnership` to attempt taking the deed. Any change to the
-   * "approved taker" for a deed SHALL cause Approve to emit. However, an exception, the
-   * Approve event will not emit when Transfer emits, this is because Transfer implicitly
-   * denotes the "approved taker" is reset to the zero address.
-   * @param _from The address of an owner.
-   * @param _to Address to be approved for the given deed ID.
-   * @param _deedId ID of the token to be approved.
-   */
-  event Approval(address indexed _from, address indexed _to, uint256 indexed _deedId);
+  mapping(bytes4 => bool) internal supportedInterfaces;
 
   /*
-   * @dev Guarantees that the msg.sender is an owner of the given deed.
-   * @param _deedId ID of the deed to validate its ownership belongs to msg.sender.
+   * @dev
    */
-  modifier onlyOwnerOf(uint256 _deedId) {
-    require(ownerOf(_deedId) == msg.sender);
+  bytes4 private constant MAGIC_ONERC721RECEIVED = bytes4(keccak256("onERC721Received(address,uint256,bytes)"));
+
+  /*
+   * @dev This emits when ownership of any NFT changes by any mechanism.
+   * This event emits when NFTs are created (`from` == 0) and destroyed
+   * (`to` == 0). Exception: during contract creation, any number of NFTs
+   * may be created and assigned without emitting Transfer. At the time of
+   * any transfer, the approved address for that NFT (if any) is reset to none.
+   */
+  event Transfer(address indexed _from, address indexed _to, uint256 _tokenId);
+
+  /*
+   * @dev This emits when the approved address for an NFT is changed or
+   * reaffirmed. The zero address indicates there is no approved address.
+   * When a Transfer event emits, this also indicates that the approved
+   * address for that NFT (if any) is reset to none.
+   */
+  event Approval(address indexed _owner, address indexed _approved, uint256 _tokenId);
+
+  /*
+   * @dev This emits when an operator is enabled or disabled for an owner.
+   * The operator can manage all NFTs of the owner.
+   */
+  event ApprovalForAll(address indexed _owner, address indexed _operator, bool _approved);
+
+  /*
+   * @dev Guarantees that the msg.sender is an owner or operator of the given NFToken.
+   * @param _tokenId ID of the NFToken to validate.
+   */
+  modifier canOperate(uint256 _tokenId) {
+    address owner = idToOwner[_tokenId];
+    require(owner == msg.sender || ownerToOperators[owner][msg.sender]);
+    _;
+  }
+
+  /*
+   * @dev Guarantees that the msg.sender is allowed to transfer NFToken.
+   * @param _tokenId ID of the NFToken to transfer.
+   */
+  modifier canTransfer(uint256 _tokenId) {
+    address owner = idToOwner[_tokenId];
+    require(
+      owner == msg.sender
+      || getApproved(_tokenId) == msg.sender
+      || ownerToOperators[owner][msg.sender]
+    );
+
+    _;
+  }
+
+  /*
+   * @dev Guarantees that _tokenId is a valid Token.
+   * @param _tokenId ID of the NFToken to validate.
+   */
+  modifier validNFToken(uint256 _tokenId) {
+    require(idToOwner[_tokenId] != address(0));
     _;
   }
 
   /*
    * @dev Contract constructor.
-   * @param _name Name of the deed issuer.
-   * @param _symbol Symbol of the deed issuer.
+   * @param _name Name of the NFToken issuer.
+   * @param _symbol Symbol of the NFToken issuer.
    */
   function Xcert(string _name, string _symbol)
     public
   {
     issuerName = _name;
     issuerSymbol = _symbol;
+    supportedInterfaces[0x01ffc9a7] = true; // ERC165
+    supportedInterfaces[0x6466353c] = true; // ERC721
+    supportedInterfaces[0x5b5e139f] = true; // ERC721Metadata
   }
 
   /*
-   * @dev Returns a descriptive name for a collection of deeds.
+   * @dev Returns the count of all NFTokens assigent to owner.
+   * @param _owner Address where we are interested in NFTokens owned by them.
    */
-  function name()
+  function balanceOf(address _owner)
     external
     view
-    returns (string _name)
+    returns (uint256)
   {
-    _name = issuerName;
+    require(_owner != address(0));
+    return ownerToNFTokenCount[_owner];
   }
 
   /*
-  * @notice Returns nn abbreviated name for deeds.
-  */
-  function symbol()
-    external
-    view
-    returns (string _symbol)
-  {
-    _symbol = issuerSymbol;
-  }
-
-  /*
-   * @dev A distinct URI (RFC 3986) for a given deed.
-   * @param _deedId Id for which we want uri.
+   * @notice Find the owner of a NFToken.
+   * @param _tokenId The identifier for a NFToken we are inspecting.
    */
-  function deedUri(uint256 _deedId)
+  function ownerOf(uint256 _tokenId)
     external
-    view
-    returns (string _deedUri)
-  {
-    require(idToOwner[_deedId] != address(0));
-    _deedUri = idToUri[_deedId];
-  }
-
-  /*
-   * @notice Find the owner of a deed.
-   * @param _deedId The identifier for a deed we are inspecting.
-   */
-  function ownerOf(uint256 _deedId)
-    public
     view
     returns (address _owner)
   {
-    _owner = idToOwner[_deedId];
+    _owner = idToOwner[_tokenId];
     require(_owner != address(0));
   }
 
   /*
-   * @dev Returns an address currently approved to take ownership of the given deed ID.
-   * @param _deedId ID of the deed to query the approval of.
+   * @notice Transfers the ownership of an NFT from one address to another address
+   * @dev Throws unless `msg.sender` is the current owner, an authorized
+   * operator, or the approved address for this NFT. Throws if `_from` is
+   * not the current owner. Throws if `_to` is the zero address. Throws if
+   * `_tokenId` is not a valid NFT. When transfer is complete, this function
+   * checks if `_to` is a smart contract (code size > 0). If so, it calls
+   * `onERC721Received` on `_to` and throws if the return value is not
+   * `bytes4(keccak256("onERC721Received(address,uint256,bytes)"))`.
+   * @param _from The current owner of the NFT
+   * @param _to The new owner
+   * @param _tokenId The NFT to transfer
+   * @param data Additional data with no specified format, sent in call to `_to`
    */
-  function approvedFor(uint256 _deedId)
+  function safeTransferFrom(address _from,
+                            address _to,
+                            uint256 _tokenId,
+                            bytes data)
+    external
+  {
+    _safeTransferFrom(_from, _to, _tokenId, data);
+  }
+
+  /*
+   * @notice Transfers the ownership of an NFT from one address to another address
+   * @dev This works identically to the other function with an extra data parameter,
+   * except this function just sets data to []
+   * @param _from The current owner of the NFT
+   * @param _to The new owner
+   * @param _tokenId The NFT to transfer
+   */
+  function safeTransferFrom(address _from,
+                            address _to,
+                            uint256 _tokenId)
+    external
+  {
+    _safeTransferFrom(_from, _to, _tokenId, "");
+  }
+
+  /*
+   * @notice Transfer ownership of an NFT -- THE CALLER IS RESPONSIBLE
+   * TO CONFIRM THAT `_to` IS CAPABLE OF RECEIVING NFTS OR ELSE
+   * THEY MAY BE PERMANENTLY LOST
+   * @dev Throws unless `msg.sender` is the current owner, an authorized
+   * operator, or the approved address for this NFT. Throws if `_from` is
+   * not the current owner. Throws if `_to` is the zero address. Throws if
+   * `_tokenId` is not a valid NFT.
+   * @param _from The current owner of the NFT
+   * @param _to The new owner
+   * @param _tokenId The NFT to transfer
+   */
+  function transferFrom(address _from,
+                        address _to,
+                        uint256 _tokenId)
+    external
+    canTransfer(_tokenId)
+    validNFToken(_tokenId)
+  {
+    address owner = idToOwner[_tokenId];
+    require(owner == _from);
+    require(_to != address(0));
+
+    _transfer(_to, _tokenId);
+  }
+
+  /*
+   * @dev Approves another address to claim for the ownership of the given NFToken ID.
+   * @param _to Address to be approved for the given NFToken ID.
+   * @param _tokenId ID of the token to be approved.
+   */
+  function approve(address _approved, uint256 _tokenId)
+    external
+    canOperate(_tokenId)
+    validNFToken(_tokenId)
+  {
+    address owner = idToOwner[_tokenId];
+    require(_approved != owner);
+    require(!(getApproved(_tokenId) == address(0) && _approved == address(0)));
+
+    idToApprovals[_tokenId] = _approved;
+    Approval(owner, _approved, _tokenId);
+  }
+
+  /*
+   * @notice Enable or disable approval for a third party ("operator") to manage
+   * all your asset.
+   * @dev Emits the ApprovalForAll event
+   * @param _operator Address to add to the set of authorized operators.
+   * @param _approved True if the operators is approved, false to revoke approval
+   */
+  function setApprovalForAll(address _operator,
+                             bool _approved)
+    external
+  {
+    ownerToOperators[msg.sender][_operator] = _approved;
+    ApprovalForAll(msg.sender, _operator, _approved);
+  }
+
+  /*
+   * @dev Returns an address currently approved to take ownership of the given NFToken ID.
+   * @param _tokenId ID of the NFToken to query the approval of.
+   */
+  function getApproved(uint256 _tokenId)
     public
     view
+    validNFToken(_tokenId)
     returns (address)
   {
-    return idToApprovals[_deedId];
+    return idToApprovals[_tokenId];
   }
 
   /*
-   * @dev Sets a new owner for your deed.
-   * @param _to Address of a new owner.
-   * @param _deedId The deed that is being transferred.
+   * @notice Query if an address is an authorized operator for another address
+   * @param _owner The address that owns the NFTs
+   * @param _operator The address that acts on behalf of the owner
+   * @return True if `_operator` is an approved operator for `_owner`, false otherwise
    */
-  function transfer(address _to, uint256 _deedId)
-    onlyOwnerOf(_deedId)
+  function isApprovedForAll(address _owner,
+                            address _operator)
     external
-    payable
-  {
-    address from = msg.sender;
-    require(_to != address(0));
-    require(from != _to);
-
-    clearApproval(from, _deedId);
-    removeDeed(from, _deedId);
-    addDeed(_to, _deedId);
-
-    Transfer(from, _to, _deedId);
-  }
-
-  /*
-   * @dev Claims the ownership of a given deed ID.
-   * @param _deedId ID of the deed being claimed by the msg.sender.
-   */
-  function takeOwnership(uint256 _deedId)
-    external
-    payable
+    view
     returns (bool)
   {
-    address from = ownerOf(_deedId);
-    address to = msg.sender;
-
-    require(approvedFor(_deedId) == to);
-    require(to != from);
-
-    clearApproval(from, _deedId);
-    removeDeed(from, _deedId);
-    addDeed(to, _deedId);
-
-    Transfer(from, to, _deedId);
-    return true;
+    return ownerToOperators[_owner][_operator];
   }
 
   /*
-   * @dev Approves another address to claim for the ownership of the given deed ID.
-   * @param _to Address to be approved for the given deed ID.
-   * @param _deedId ID of the token to be approved.
+   * @dev Actually perform the safeTransferFrom.
+   * @param _from The current owner of the NFT
+   * @param _to The new owner
+   * @param _tokenId The NFT to transfer
+   * @param data Additional data with no specified format, sent in call to `_to`
    */
-  function approve(address _to, uint256 _deedId)
-    external
-    payable
-    onlyOwnerOf(_deedId)
+  function _safeTransferFrom(address _from,
+                             address _to,
+                             uint256 _tokenId,
+                             bytes _data)
+    internal
+    canTransfer(_tokenId)
+    validNFToken(_tokenId)
   {
-    address owner = ownerOf(_deedId);
-    require(_to != owner);
-    require(!(approvedFor(_deedId) == address(0) && _to == address(0)));
+      address owner = idToOwner[_tokenId];
+      require(owner == _from);
+      require(_to != address(0));
 
-    idToApprovals[_deedId] = _to;
-    Approval(owner, _to, _deedId);
+      _transfer(_to, _tokenId);
+
+      // Do the callback after everything is done to avoid reentrancy attack
+      uint256 codeSize;
+      assembly { codeSize := extcodesize(_to) }
+      if (codeSize == 0) {
+          return;
+      }
+      bytes4 retval = ERC721TokenReceiver(_to).onERC721Received(_from, _tokenId, _data);
+      require(retval == MAGIC_ONERC721RECEIVED);
   }
 
   /*
-   * @dev Mints a new deed.
-   * @param _to The address that will own the minted deed.
-   * @param _id of the deed to be minted by the msg.sender.
-   * @param _uri that points to deed metadata (optional, max length 2083).
+   * @dev Actually preforms the transfer. Does NO checks.
+   * @param _to Address of a new owner.
+   * @param _tokenId The NFToken that is being transferred.
+   */
+  function _transfer(address _to, uint256 _tokenId)
+    private
+  {
+    address from = idToOwner[_tokenId];
+
+    clearApproval(from, _tokenId);
+    removeNFToken(from, _tokenId);
+    addNFToken(_to, _tokenId);
+
+    Transfer(from, _to, _tokenId);
+  }
+
+  /*
+   * @dev Mints a new NFToken.
+   * @param _to The address that will own the minted NFToken.
+   * @param _id of the NFToken to be minted by the msg.sender.
+   * @param _uri that points to NFToken metadata (optional, max length 2083).
    */
   function mint(address _to,
                 uint256 _id,
@@ -238,136 +352,69 @@ contract Xcert is Ownable {
     require(utfStringLength(_uri) <= 2083);
 
     idToUri[_id] = _uri;
-    addDeed(_to, _id);
-    totalDeeds = totalDeeds.add(1);
+    addNFToken(_to, _id);
 
     Transfer(address(0), _to, _id);
     return true;
   }
 
  /*
-  * @dev Burns a specified deed.
-  * @param _deedId Id of the deed we want to burn.
+  * @dev Burns a specified NFToken.
+  * @param _tokenId Id of the NFToken we want to burn.
   */
- function burn(uint256 _deedId)
-   onlyOwnerOf(_deedId)
+ function burn(uint256 _tokenId)
+   canOperate(_tokenId)
+   validNFToken(_tokenId)
    external
  {
-    if (approvedFor(_deedId) != 0) {
-      clearApproval(msg.sender, _deedId);
+    if (getApproved(_tokenId) != 0) {
+      clearApproval(msg.sender, _tokenId);
     }
 
-    removeDeed(msg.sender, _deedId);
-    delete idToUri[_deedId];
-    totalDeeds = totalDeeds.sub(1);
+    removeNFToken(msg.sender, _tokenId);
+    delete idToUri[_tokenId];
 
-    Transfer(msg.sender, address(0), _deedId);
+    Transfer(msg.sender, address(0), _tokenId);
  }
 
   /*
-   * @dev Returns the count of deeds tracked by this contract.
+   * @dev Clears the current approval of a given NFToken ID.
+   * @param _tokenId ID of the NFToken to be transferred.
    */
-  function countOfDeeds()
-    external
-    view
-    returns (uint256)
-  {
-    return totalDeeds;
-  }
-
-  /*
-   * @dev Returns the count of all deeds assigent to owner.
-   * @param _owner Address where we are interested in deeds owned by them.
-   */
-  function countOfDeedsByOwner(address _owner)
-    public
-    view
-    returns (uint256 _count)
-  {
-    require(_owner != address(0));
-    _count = ownerToList[_owner].length;
-  }
-
-  /*
-   * @dev Enumerate deeds assigned to an owner (sort order not specified).
-   * @param _owner An address where we are interested in deed owned by them.
-   * @param _index A counter less than `countOfDeedsByOwner(_owner)`.
-   */
-  function deedOfOwnerByIndex(address _owner, uint256 _index)
-    external
-    view
-    returns (uint256 _deedId)
-  {
-    require(_owner != address(0));
-    require(_index < ownerToList[_owner].length);
-    _deedId = ownerToList[_owner][_index];
-  }
-
-  /*
-   * @dev Clears the current approval of a given deed ID.
-   * @param _tokenId ID of the deed to be transferred.
-   */
-  function clearApproval(address _owner, uint256 _deedId)
+  function clearApproval(address _owner, uint256 _tokenId)
     private
   {
-    require(ownerOf(_deedId) == _owner);
-    delete idToApprovals[_deedId];
-    Approval(_owner, 0, _deedId);
+    require(idToOwner[_tokenId] == _owner);
+    delete idToApprovals[_tokenId];
+    Approval(_owner, 0, _tokenId);
   }
 
-
   /*
-   * @dev Removes a deed from owner.
-   * @param _from Address from wich we want to remove the deed.
-   * @param _deedId Which deed we want to remove.
+   * @dev Removes a NFToken from owner.
+   * @param _from Address from wich we want to remove the NFToken.
+   * @param _tokenId Which NFToken we want to remove.
    */
-  function removeDeed(address _from, uint256 _deedId)
+  function removeNFToken(address _from, uint256 _tokenId)
    private
   {
-    require(idToOwner[_deedId] == _from);
+    require(idToOwner[_tokenId] == _from);
 
-    uint256 tokenIndex = idToIndex[_deedId];
-    uint256 lastTokenIndex = countOfDeedsByOwner(_from).sub(1);
-    uint256 lastToken = ownerToList[_from][lastTokenIndex];
-
-    delete idToOwner[_deedId];
-
-    ownerToList[_from][tokenIndex] = lastToken;
-    delete ownerToList[_from][lastTokenIndex];
-
-    ownerToList[_from].length--;
-    delete idToIndex[_deedId];
-    idToIndex[lastToken] = tokenIndex;
+    ownerToNFTokenCount[_from] = ownerToNFTokenCount[_from].sub(1);
+    delete idToOwner[_tokenId];
   }
 
   /*
-   * @dev Assignes a new deed to owner.
-   * @param _To Address to wich we want to add the deed.
-   * @param _deedId Which deed we want to add.
+   * @dev Assignes a new NFToken to owner.
+   * @param _To Address to wich we want to add the NFToken.
+   * @param _tokenId Which NFToken we want to add.
    */
-  function addDeed(address _to, uint256 _deedId)
+  function addNFToken(address _to, uint256 _tokenId)
     private
   {
-    require(idToOwner[_deedId] == address(0));
+    require(idToOwner[_tokenId] == address(0));
 
-    idToOwner[_deedId] = _to;
-    uint256 length = ownerToList[_to].length;
-    ownerToList[_to].push(_deedId);
-    idToIndex[_deedId] = length;
-  }
-
-  /*
-   * @dev Gets all deed IDs of the specified address.
-   * @param _owner Address for the deed's owner.
-   * @return _ownedDeedIds Eepresenting all deed IDs owned by the passed address.
-   */
-  function deedsOf(address _owner)
-    external
-    view
-    returns (uint256[] _ownedDeedIds)
-  {
-    require(_owner != address(0));
-    _ownedDeedIds = ownerToList[_owner];
+    idToOwner[_tokenId] = _to;
+    ownerToNFTokenCount[_to] = ownerToNFTokenCount[_to].add(1);
   }
 
   /*
@@ -408,4 +455,50 @@ contract Xcert is Ownable {
     }
   }
 
+  /*
+   * @dev Returns a descriptive name for a collection of NFTokens.
+   */
+  function name()
+    external
+    view
+    returns (string _name)
+  {
+    _name = issuerName;
+  }
+
+  /*
+  * @notice Returns nn abbreviated name for NFTokens.
+  */
+  function symbol()
+    external
+    view
+    returns (string _symbol)
+  {
+    _symbol = issuerSymbol;
+  }
+
+  /*
+   * @dev A distinct URI (RFC 3986) for a given NFToken.
+   * @param _tokenId Id for which we want uri.
+   */
+  function tokenURI(uint256 _tokenId)
+    external
+    view
+    returns (string)
+  {
+    require(idToOwner[_tokenId] != address(0));
+    return idToUri[_tokenId];
+  }
+
+  /*
+   * @dev Function to check which interfaces are suported by this contract.
+   * @param interfaceID If of the interface.
+   */
+  function supportsInterface(bytes4 interfaceID)
+    external
+    view
+    returns (bool)
+  {
+    return supportedInterfaces[interfaceID];
+  }
 }
