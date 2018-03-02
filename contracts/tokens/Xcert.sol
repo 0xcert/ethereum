@@ -57,7 +57,12 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
   mapping(bytes4 => bool) internal supportedInterfaces;
 
   /*
-   * @dev
+   * @dev Mapping of addresses authorized to mint new NFTokens.
+   */
+  mapping (address => bool) private addressToMintAuthorized;
+
+  /*
+   * @dev Check for recieved transfer to a smart contract.
    */
   bytes4 private constant MAGIC_ONERC721RECEIVED = bytes4(
     keccak256("onERC721Received(address,uint256,bytes)")
@@ -85,6 +90,13 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
    * The operator can manage all NFTs of the owner.
    */
   event ApprovalForAll(address indexed _owner, address indexed _operator, bool _approved);
+
+  /*
+   * @dev This emits when an address is given authorization to mint new NFTokens or the
+   * authorization is revoked.
+   * The _target can mint new NFTokens.
+   */
+  event MintAuthorizedAddress(address indexed _target, bool _authorized);
 
   /*
    * @dev Guarantees that the msg.sender is an owner or operator of the given NFToken.
@@ -117,6 +129,14 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
    */
   modifier validNFToken(uint256 _tokenId) {
     require(idToOwner[_tokenId] != address(0));
+    _;
+  }
+
+  /*
+   * @dev Guarantees that msg.sender is allowed to mint a new NFToken.
+   */
+  modifier canMint() {
+    require(msg.sender == owner || addressToMintAuthorized[msg.sender]);
     _;
   }
 
@@ -348,7 +368,7 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
                 uint256 _id,
                 string _uri)
     external
-    onlyOwner()
+    canMint()
     returns (bool)
   {
     require(_to != address(0));
@@ -505,5 +525,20 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
     returns (bool)
   {
     return supportedInterfaces[interfaceID];
+  }
+
+  /*
+   * @dev Sets mint authorised address.
+   * @param _target Address to set authorized state.
+   * @patam _authorized True if the _target is authorised, false to revoke authorization.
+   */
+  function setMintAuthorizedAddress(address _target,
+                                    bool _authorized)
+    external
+    onlyOwner
+  {
+    require(_target != address(0));
+    addressToMintAuthorized[_target] = _authorized;
+    MintAuthorizedAddress(_target, _authorized);
   }
 }

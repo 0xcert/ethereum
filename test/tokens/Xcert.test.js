@@ -32,12 +32,44 @@ contract('Xcert', (accounts) => {
     await assertRevert(xcert.mint('0', id3, ''));
   });
 
-  it('throws when trying to mint NFToken from non owner address', async () => {
+  it('throws when trying to mint NFToken from non owner ot authorized address', async () => {
     await assertRevert(xcert.mint('0', id3, '', { from: accounts[1] }));
   });
 
   it('throws when trying to mint NFToken with uri length more then 2083 chars', async () => {
     await assertRevert(xcert.mint(accounts[0], id4, 'sdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfddfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfd'));
+  });
+
+  it('correctly authotizes address for minting', async () => {
+    var { logs } = await xcert.setMintAuthorizedAddress(accounts[1], true);
+    let mintAuthorizedAddressEvent = logs.find(e => e.event === 'MintAuthorizedAddress');
+    assert.notEqual(mintAuthorizedAddressEvent, undefined);
+  });
+
+  it('throws when someone else then the owner tries to authotize address ', async () => {
+    await assertRevert(xcert.setMintAuthorizedAddress(accounts[1], true, {from: accounts[2]}));
+  });
+
+  it('throws when trying to authorize zero address', async () => {
+    await assertRevert(xcert.setMintAuthorizedAddress('0', true));
+  });
+
+  it('correctly mints new NFToken by authorized address', async () => {
+    var authorized = accounts[1];
+    var recipient = accounts[2];
+    await xcert.setMintAuthorizedAddress(authorized, true);
+    await xcert.mint(recipient, id3, 'url3', {from: authorized});
+
+    const count = await xcert.balanceOf(recipient);
+    assert.equal(count.toNumber(), 1);
+  });
+
+  it('throws trying to ming from address which authorization got revoked', async () => {
+    var authorized = accounts[1];
+    var recipient = accounts[2];
+    await xcert.setMintAuthorizedAddress(authorized, true);
+    await xcert.setMintAuthorizedAddress(authorized, false);
+    await assertRevert(xcert.mint(recipient, id3, 'url3', {from: authorized}));
   });
 
   it('finds the correct amount of NFTokens owned by account', async () => {
@@ -209,7 +241,7 @@ contract('Xcert', (accounts) => {
     assert.equal(ownerOfId2, recipient);
   });
 
-  it.only('throws when trying to safe transfers NFToken from owner to a smart contract', async () => {
+  it('throws when trying to safe transfers NFToken from owner to a smart contract', async () => {
     var sender = accounts[1];
     var recipient = xcert.address;
 
