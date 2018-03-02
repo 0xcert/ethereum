@@ -59,7 +59,9 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
   /*
    * @dev
    */
-  bytes4 private constant MAGIC_ONERC721RECEIVED = bytes4(keccak256("onERC721Received(address,uint256,bytes)"));
+  bytes4 private constant MAGIC_ONERC721RECEIVED = bytes4(
+    keccak256("onERC721Received(address,uint256,bytes)")
+  );
 
   /*
    * @dev This emits when ownership of any NFT changes by any mechanism.
@@ -253,6 +255,7 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
                              bool _approved)
     external
   {
+    require(_operator != address(0));
     ownerToOperators[msg.sender][_operator] = _approved;
     ApprovalForAll(msg.sender, _operator, _approved);
   }
@@ -282,6 +285,8 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
     view
     returns (bool)
   {
+    require(_owner != address(0));
+    require(_operator != address(0));
     return ownerToOperators[_owner][_operator];
   }
 

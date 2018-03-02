@@ -80,47 +80,141 @@ contract('Xcert', (accounts) => {
     await assertRevert(xcert.getApproved(id4));
   });
 
-/*  it('correctly approves and take ownership of NFToken id 2 from account[0] to account[1]', async () => {
-    await xcert.mint(accounts[0], id2, 'url2');
-    await xcert.approve(accounts[1], id2);
-    await xcert.transferFrom(id2, {from: accounts[1]});
-    const countac0 = await xcert.balanceOf(accounts[0]);
-    const countac1 = await xcert.balanceOf(accounts[1]);
-    const owner = await xcert.ownerOf(id2);
-    assert.equal(owner, accounts[1]);
-    assert.equal(countac0, 0);
-    assert.equal(countac1, 1);
-  });
-
-  it('throws when trying to take ownership that is not approved for', async () => {
-    await xcert.mint(accounts[1], id2, 'url2');
-    await assertRevert(xcert.transferFrom(id2));
-    const countac0 = await xcert.balanceOf(accounts[0]);
-    const countac1 = await xcert.balanceOf(accounts[1]);
-    const owner = await xcert.ownerOf(id2);
-    assert.equal(owner, accounts[1]);
-    assert.equal(countac0, 0);
-    assert.equal(countac1, 1);
-  });
-
-  it('throws when trying to take ownership of NFToken that approval was granted but then canceled', async () => {
-    await xcert.mint(accounts[1], id2, 'url2');
-    await xcert.approve(accounts[0], id2, {from: accounts[1]});
-    await xcert.approve(0, id2, {from: accounts[1]});
-    await assertRevert(xcert.transferFrom(id2));
-    const countac0 = await xcert.balanceOf(accounts[0]);
-    const countac1 = await xcert.balanceOf(accounts[1]);
-    const owner = await xcert.ownerOf(id2);
-    assert.equal(owner, accounts[1]);
-    assert.equal(countac0, 0);
-    assert.equal(countac1, 1);
-  });*/
 
   it('throws when trying to approve NFToken id that we are not the owner of', async () => {
     await xcert.mint(accounts[1], id2, 'url2');
     await assertRevert(xcert.approve(accounts[1], id2));
     const address = await xcert.getApproved(id2);
     assert.equal(address, 0);
+  });
+
+  it('correctly sets an operator', async () => {
+    var { logs } = await xcert.setApprovalForAll(accounts[6], true);
+    let approvalForAllEvent = logs.find(e => e.event === 'ApprovalForAll');
+    assert.notEqual(approvalForAllEvent, undefined);
+
+    var isApprovedForAll = await xcert.isApprovedForAll(accounts[0], accounts[6]);
+    assert.equal(isApprovedForAll, true);
+  });
+
+  it('correctly sets than cancels an operator', async () => {
+    await xcert.setApprovalForAll(accounts[6], true);
+    await xcert.setApprovalForAll(accounts[6], false);
+
+    var isApprovedForAll = await xcert.isApprovedForAll(accounts[0], accounts[6]);
+    assert.equal(isApprovedForAll, false);
+  });
+
+  it('throws when trying to set a zero address as operator', async () => {
+    await assertRevert(xcert.setApprovalForAll(0, true));
+  });
+
+  it('corectly transfers NFToken from owner', async () => {
+    var sender = accounts[1];
+    var recipient = accounts[2];
+
+    await xcert.mint(sender, id2, 'url2');
+    var { logs } = await xcert.transferFrom(sender, recipient, id2, {from: sender});
+    let transferEvent = logs.find(e => e.event === 'Transfer');
+    assert.notEqual(transferEvent, undefined);
+
+    var senderBalance = await xcert.balanceOf(sender);
+    var recipientBalance = await xcert.balanceOf(recipient);
+    var ownerOfId2 =  await xcert.ownerOf(id2);
+
+    assert.equal(senderBalance, 0);
+    assert.equal(recipientBalance, 1);
+    assert.equal(ownerOfId2, recipient);
+  });
+
+  it('corectly transfers xcert from approved address', async () => {
+    var sender = accounts[1];
+    var recipient = accounts[2];
+    var owner = accounts[3];
+
+    await xcert.mint(owner, id2, 'url2');
+    await xcert.approve(sender, id2, {from: owner});
+    var { logs } = await xcert.transferFrom(owner, recipient, id2, {from: sender});
+    let transferEvent = logs.find(e => e.event === 'Transfer');
+    assert.notEqual(transferEvent, undefined);
+
+    var ownerBalance = await xcert.balanceOf(owner);
+    var recipientBalance = await xcert.balanceOf(recipient);
+    var ownerOfId2 =  await xcert.ownerOf(id2);
+
+    assert.equal(ownerBalance, 0);
+    assert.equal(recipientBalance, 1);
+    assert.equal(ownerOfId2, recipient);
+  });
+
+  it('corectly transfers NFToken as operator', async () => {
+    var sender = accounts[1];
+    var recipient = accounts[2];
+    var owner = accounts[3];
+
+    await xcert.mint(owner, id2, 'url2');
+    await xcert.setApprovalForAll(sender, true, {from: owner});
+    var { logs } = await xcert.transferFrom(owner, recipient, id2, {from: sender});
+    let transferEvent = logs.find(e => e.event === 'Transfer');
+    assert.notEqual(transferEvent, undefined);
+
+    var ownerBalance = await xcert.balanceOf(owner);
+    var recipientBalance = await xcert.balanceOf(recipient);
+    var ownerOfId2 =  await xcert.ownerOf(id2);
+
+    assert.equal(ownerBalance, 0);
+    assert.equal(recipientBalance, 1);
+    assert.equal(ownerOfId2, recipient);
+  });
+
+  it('throws when trying to transfer NFToken as an address that is not owner, approved or operator', async () => {
+    var sender = accounts[1];
+    var recipient = accounts[2];
+    var owner = accounts[3];
+
+    await xcert.mint(owner, id2, 'url2');
+    await assertRevert(xcert.transferFrom(owner, recipient, id2, {from: sender}));
+  });
+
+  it('throws when trying to transfer NFToken to a zero address', async () => {
+    var owner = accounts[3];
+
+    await xcert.mint(owner, id2, 'url2');
+    await assertRevert(xcert.transferFrom(owner, 0, id2, {from: owner}));
+  });
+
+  it('throws when trying to transfer a non valid xcert', async () => {
+    var owner = accounts[3];
+    var recipient = accounts[2];
+
+    await xcert.mint(owner, id2, 'url2');
+    await assertRevert(xcert.transferFrom(owner, 0, id3, {from: owner}));
+  });
+
+  it('corectly safe transfers NFToken from owner', async () => {
+    var sender = accounts[1];
+    var recipient = accounts[2];
+
+    await xcert.mint(sender, id2, 'url2');
+    var { logs } = await xcert.safeTransferFrom(sender, recipient, id2, {from: sender});
+    let transferEvent = logs.find(e => e.event === 'Transfer');
+    assert.notEqual(transferEvent, undefined);
+
+    var senderBalance = await xcert.balanceOf(sender);
+    var recipientBalance = await xcert.balanceOf(recipient);
+    var ownerOfId2 =  await xcert.ownerOf(id2);
+
+    assert.equal(senderBalance, 0);
+    assert.equal(recipientBalance, 1);
+    assert.equal(ownerOfId2, recipient);
+  });
+
+  it.only('throws when trying to safe transfers NFToken from owner to a smart contract', async () => {
+    var sender = accounts[1];
+    var recipient = xcert.address;
+
+    await xcert.mint(sender, id2, 'url2');
+    await assertRevert(xcert.safeTransferFrom(sender, recipient, id2, {from: sender}));
   });
 
   it('returns the correct issuer name', async () => {
