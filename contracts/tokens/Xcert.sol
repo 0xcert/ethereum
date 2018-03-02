@@ -541,4 +541,18 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
     addressToMintAuthorized[_target] = _authorized;
     MintAuthorizedAddress(_target, _authorized);
   }
+
+  /*
+   * @dev Sets mint authorised address.
+   * @param _target Address for which we want to check if it is authorized.
+   * @return Is authorized or not.
+   */
+  function isMintAuthorizedAddress(address _target)
+    external
+    view
+    returns (bool)
+  {
+    require(_target != address(0));
+    return addressToMintAuthorized[_target];
+  }
 }

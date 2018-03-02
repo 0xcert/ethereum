@@ -303,7 +303,7 @@ contract Exchange {
                             bytes32 _r,
                             bytes32 _s)
     public
-    constant
+    pure
     returns (bool)
   {
     return _signer == ecrecover(
