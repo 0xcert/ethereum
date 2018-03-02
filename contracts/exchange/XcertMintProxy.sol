@@ -10,7 +10,7 @@ import "../tokens/Xcert.sol";
 import "../ownership/Ownable.sol";
 
 /// @title TokenTransferProxy - Transfers tokens on behalf of contracts that have been approved via decentralized governance.
-contract XcertProxy is Ownable {
+contract XcertMintProxy is Ownable {
 
   /// @dev Only authorized addresses can invoke functions with this modifier.
   modifier onlyAuthorized {
@@ -68,30 +68,16 @@ contract XcertProxy is Ownable {
     LogAuthorizedAddressRemoved(target, msg.sender);
   }
 
-  function transfer(
-    address _xcert,
-    uint256 _id,
-    address _to)
-    external
-    onlyAuthorized
-    returns (bool)
-  {
-    return Xcert(_xcert).takeOwnership(_id);
-    //return Xcert(_xcert).transfer(_to, _id);
-  }
-
-  function mint(
-    address _xcert,
-    uint256 _id,
-    string _uri,
-    address _to)
+  function mint(address _xcert,
+                uint256 _id,
+                string _uri,
+                address _to)
     external
     onlyAuthorized
     returns (bool)
   {
     return Xcert(_xcert).mint(_to, _id, _uri);
   }
-
 
   /*
    * Public constant functions

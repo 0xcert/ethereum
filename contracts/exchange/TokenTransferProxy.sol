@@ -18,7 +18,7 @@
 
 pragma solidity 0.4.19;
 
-import "../tokens/Xct.sol";
+import "../tokens/ERC20.sol";
 import "../ownership/Ownable.sol";
 
 /// @title TokenTransferProxy - Transfers tokens on behalf of contracts that have been approved via decentralized governance.
@@ -87,16 +87,15 @@ contract TokenTransferProxy is Ownable {
     /// @param to Address to transfer token to.
     /// @param value Amount of token to transfer.
     /// @return Success of transfer.
-    function transferFrom(
-        address token,
-        address from,
-        address to,
-        uint value)
-        public
-        onlyAuthorized
-        returns (bool)
+    function transferFrom(address token,
+                          address from,
+                          address to,
+                          uint value)
+      public
+      onlyAuthorized
+      returns (bool)
     {
-        return Xct(token).transferFrom(from, to, value);
+      return ERC20(token).transferFrom(from, to, value);
     }
 
     /*
