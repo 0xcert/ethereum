@@ -97,6 +97,6 @@ interface ERC20 {
   /**
    * @dev Trigger on any successful call to approve(address _spender, uint256 _value).
    */
-  event Approval(address indexed _owner, address indexed _spender, uint256 _value);
+  event Approval(address indexed _owner, address indexed _spender, uint256 _value);  
 
 }
