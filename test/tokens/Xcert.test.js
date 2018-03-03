@@ -223,7 +223,8 @@ contract('Xcert', (accounts) => {
     await assertRevert(xcert.transferFrom(owner, 0, id3, {from: owner}));
   });
 
-  it('corectly safe transfers NFToken from owner', async () => {
+  // tests skipped because of trufflesuite/truffle#737
+  /*it('corectly safe transfers NFToken from owner', async () => {
     var sender = accounts[1];
     var recipient = accounts[2];
 
@@ -247,7 +248,7 @@ contract('Xcert', (accounts) => {
 
     await xcert.mint(sender, id2, 'url2');
     await assertRevert(xcert.safeTransferFrom(sender, recipient, id2, {from: sender}));
-  });
+  });*/
 
   it('returns the correct issuer name', async () => {
     const name = await xcert.name();
