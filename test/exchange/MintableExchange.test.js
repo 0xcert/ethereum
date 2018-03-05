@@ -38,6 +38,13 @@ contract('MintableExchange', (accounts) => {
     mintProxy.addAuthorizedAddress(exchange.address);
   });
 
+  describe('contract addresses', function () {
+    it('check if xcert mint proxy address is correct', async () => {
+      var address = await exchange.getXcertMintProxyAddress();
+      assert.equal(address, mintProxy.address);
+    });
+  });
+
   describe('hashing', function () {
     var testArrayAccount = [accounts[3], accounts[5]];
     var testArrayAmount = [1, 10];
@@ -53,7 +60,6 @@ contract('MintableExchange', (accounts) => {
       assert.notEqual(contractHash, localHash);
     });
   });
-
 
   describe('mint', function () {
 
@@ -189,6 +195,7 @@ contract('MintableExchange', (accounts) => {
             await token.approve(tokenProxy.address, 20, {from: to});
             await assertRevert(exchange.performMint(to, xcert.address, id1, uri, addressArray, amountArray, timestamp, v, r, s, false, {from: to}));
           });
+
         });
 
       });

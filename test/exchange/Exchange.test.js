@@ -37,6 +37,23 @@ contract('Exchange', (accounts) => {
     tokenProxy.addAuthorizedAddress(exchange.address);
   });
 
+  describe('contract addresses', function () {
+    it('check if token address is correct', async () => {
+      var address = await exchange.getTokenAddress();
+      assert.equal(address, token.address);
+    });
+
+    it('check if token transfer proxy address is correct', async () => {
+      var address = await exchange.getTokenTransferProxyAddress();
+      assert.equal(address, tokenProxy.address);
+    });
+
+    it('check if none-fundgible token transfer proxy address is correct', async () => {
+      var address = await exchange.getNFTokenTransferProxyAddress();
+      assert.equal(address, nfTokenProxy.address);
+    });
+  });
+
   describe('hashing', function () {
     var testArrayAccount = [accounts[3], accounts[5]];
     var testArrayAmount = [1, 10];
