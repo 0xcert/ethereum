@@ -1,6 +1,7 @@
 const Xcert = artifacts.require('Xcert');
 const util = require('ethjs-util');
 const assertRevert = require('../helpers/assertRevert');
+const TokenReceiverMock = artifacts.require('ERC721TokenReceiverMock');
 
 contract('Xcert', (accounts) => {
   let xcert;
@@ -223,13 +224,12 @@ contract('Xcert', (accounts) => {
     await assertRevert(xcert.transferFrom(owner, 0, id3, {from: owner}));
   });
 
-  // tests skipped because of trufflesuite/truffle#737
-  /*it('corectly safe transfers NFToken from owner', async () => {
+  it('corectly safe transfers NFToken from owner', async () => {
     var sender = accounts[1];
     var recipient = accounts[2];
 
     await xcert.mint(sender, id2, 'url2');
-    var { logs } = await xcert.safeTransferFrom(sender, recipient, id2, {from: sender});
+    var { logs } = await xcert.safeTransferFrom(sender, recipient, id2, "data", {from: sender});
     let transferEvent = logs.find(e => e.event === 'Transfer');
     assert.notEqual(transferEvent, undefined);
 
@@ -247,8 +247,27 @@ contract('Xcert', (accounts) => {
     var recipient = xcert.address;
 
     await xcert.mint(sender, id2, 'url2');
-    await assertRevert(xcert.safeTransferFrom(sender, recipient, id2, {from: sender}));
-  });*/
+    await assertRevert(xcert.safeTransferFrom(sender, recipient, id2, "data", {from: sender}));
+  });
+
+  it('corectly safe transfers NFToken from owner to smart contract that can recieve NFTokens', async () => {
+    var sender = accounts[1];
+    var tokenReceiverMock = await TokenReceiverMock.new();
+    var recipient = tokenReceiverMock.address;
+
+    await xcert.mint(sender, id2, 'url2');
+    var { logs } = await xcert.safeTransferFrom(sender, recipient, id2, "data", {from: sender});
+    let transferEvent = logs.find(e => e.event === 'Transfer');
+    assert.notEqual(transferEvent, undefined);
+
+    var senderBalance = await xcert.balanceOf(sender);
+    var recipientBalance = await xcert.balanceOf(recipient);
+    var ownerOfId2 =  await xcert.ownerOf(id2);
+
+    assert.equal(senderBalance, 0);
+    assert.equal(recipientBalance, 1);
+    assert.equal(ownerOfId2, recipient);
+  });
 
   it('returns the correct issuer name', async () => {
     const name = await xcert.name();

@@ -27,9 +27,9 @@ contract Exchange {
   /*
    * @dev contract addresses
    */
-  address public XCT_TOKEN_CONTRACT;
-  address public TOKEN_TRANSFER_PROXY_CONTRACT;
-  address public NFTOKEN_TRANSFER_PROXY_CONTRACT;
+  address XCT_TOKEN_CONTRACT;
+  address TOKEN_TRANSFER_PROXY_CONTRACT;
+  address NFTOKEN_TRANSFER_PROXY_CONTRACT;
 
   /*
    * @dev Changes to state require at least 5000 gas.
@@ -94,21 +94,37 @@ contract Exchange {
   }
 
   /*
-   * @dev Get addresses to all associated contracts (token, tokenTransferProxy, xcertProxy) .
-   * @return Array of addresses (token, tokenTransferProxy, nfTokenTransferProxy)
+   * @dev Get address of token used in exchange.
    */
-  function getAddresses()
+  function getTokenAddress()
     external
     view
-    returns (address[])
+    returns (address)
   {
-    address[] memory addresses;
-    addresses[0] = XCT_TOKEN_CONTRACT;
-    addresses[1] = TOKEN_TRANSFER_PROXY_CONTRACT;
-    addresses[2] = NFTOKEN_TRANSFER_PROXY_CONTRACT;
-    return addresses;
+    return XCT_TOKEN_CONTRACT;
   }
 
+  /*
+   * @dev Get address of token transfer proxy used in exchange.
+   */
+  function getTokenTransferProxyAddress()
+    external
+    view
+    returns (address)
+  {
+    return TOKEN_TRANSFER_PROXY_CONTRACT;
+  }
+
+  /*
+   * @dev Get address of none-fundgible token transfer proxy used in exchange.
+   */
+  function getNFTokenTransferProxyAddress()
+    external
+    view
+    returns (address)
+  {
+    return NFTOKEN_TRANSFER_PROXY_CONTRACT;
+  }
 
   /*
    * @dev Performs the Xcert transfer.

@@ -24,7 +24,7 @@ contract MintableExchange is Exchange{
   /*
    * @dev contract addresses
    */
-  address public XCERT_MINT_PROXY_CONTRACT;
+  address XCERT_MINT_PROXY_CONTRACT;
 
   /*
    * @dev Mapping of all canceled mints.
@@ -98,17 +98,12 @@ contract MintableExchange is Exchange{
    * NFtokenTransferProxy, xcertMintProxy) .
    * @return Array of addresses (token, tokenTransferProxy, nfTokenTransferProxy, xcertMintProxy)
    */
-  function getAddresses()
+  function getXcertMintProxyAddress()
     external
     view
-    returns (address[])
+    returns (address)
   {
-    address[] memory addresses;
-    addresses[0] = XCT_TOKEN_CONTRACT;
-    addresses[1] = TOKEN_TRANSFER_PROXY_CONTRACT;
-    addresses[2] = NFTOKEN_TRANSFER_PROXY_CONTRACT;
-    addresses[3] = XCERT_MINT_PROXY_CONTRACT;
-    return addresses;
+    return XCERT_MINT_PROXY_CONTRACT;
   }
 
 

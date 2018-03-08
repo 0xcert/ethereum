@@ -38,6 +38,13 @@ contract('MintableExchange', (accounts) => {
     mintProxy.addAuthorizedAddress(exchange.address);
   });
 
+  describe('contract addresses', function () {
+    it('check if xcert mint proxy address is correct', async () => {
+      var address = await exchange.getXcertMintProxyAddress();
+      assert.equal(address, mintProxy.address);
+    });
+  });
+
   describe('hashing', function () {
     var testArrayAccount = [accounts[3], accounts[5]];
     var testArrayAmount = [1, 10];
@@ -53,7 +60,6 @@ contract('MintableExchange', (accounts) => {
       assert.notEqual(contractHash, localHash);
     });
   });
-
 
   describe('mint', function () {
 
@@ -148,6 +154,18 @@ contract('MintableExchange', (accounts) => {
             assert.notEqual(event, undefined);
           });
 
+          it('throws when fee amount array is no the same length then feeRecipient', async () => {
+            await token.approve(tokenProxy.address, 20, {from: to});
+            await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
+            await assertRevert(exchange.performMint(to, xcert.address, id1, uri, addressArray, [20,10], timestamp, v, r, s, true, {from: to}));
+          });
+
+          it('throws when _from is the owner addresses are the same', async () => {
+            await token.approve(tokenProxy.address, 20, {from: to});
+            await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
+            await assertRevert(exchange.performMint(owner, xcert.address, id1, uri, addressArray, amountArray, timestamp, v, r, s, true, {from: to}));
+          });
+
           it('fails when trying to perform already performed mint', async () => {
             await token.approve(tokenProxy.address, 20, {from: to});
             await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
@@ -189,6 +207,7 @@ contract('MintableExchange', (accounts) => {
             await token.approve(tokenProxy.address, 20, {from: to});
             await assertRevert(exchange.performMint(to, xcert.address, id1, uri, addressArray, amountArray, timestamp, v, r, s, false, {from: to}));
           });
+
         });
 
       });

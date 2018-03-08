@@ -62,7 +62,7 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
   mapping (address => bool) private addressToMintAuthorized;
 
   /*
-   * @dev Check for recieved transfer to a smart contract.
+   * @dev Magic value of a smart contract that can recieve NFToken.
    */
   bytes4 private constant MAGIC_ONERC721RECEIVED = bytes4(
     keccak256("onERC721Received(address,uint256,bytes)")
