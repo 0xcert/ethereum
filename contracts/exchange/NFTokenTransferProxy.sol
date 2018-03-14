@@ -1,5 +1,5 @@
 
-pragma solidity 0.4.19;
+pragma solidity 0.4.21;
 
 /*
  * @dev based od: https://github.com/0xProject/contracts/blob/master/contracts/TokenTransferProxy.sol
@@ -69,14 +69,14 @@ contract NFTokenTransferProxy is Ownable {
   }
 
   function transferFrom(
-    address _xcert,
+    address _nfToken,
     address _from,
     address _to,
     uint256 _id)
     external
     onlyAuthorized
   {
-    ERC721(_xcert).transferFrom(_from, _to, _id);
+    ERC721(_nfToken).transferFrom(_from, _to, _id);
   }
 
   /*
