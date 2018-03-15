@@ -10,7 +10,7 @@ import "./NFTokenTransferProxy.sol";
 /*
  * @dev based on: https://github.com/0xProject/contracts/blob/master/contracts/Exchange.sol
  */
-contract Exchange {
+contract Trader {
 
   using SafeMath for uint256;
 
@@ -83,9 +83,9 @@ contract Exchange {
    * @param _tokenTransferProxy Address pointing to TokenTransferProxy contract.
    * @param _nfTokenTransferProxy Address pointing to none-fungible token transfer proxy contract.
    */
-  function Exchange(address _xctToken,
-                    address _tokenTransferProxy,
-                    address _nfTokenTransferProxy)
+  function Trader(address _xctToken,
+                  address _tokenTransferProxy,
+                  address _nfTokenTransferProxy)
     public
   {
     XCT_TOKEN_CONTRACT = _xctToken;
