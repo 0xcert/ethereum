@@ -21,13 +21,13 @@ contract Trader {
     TRANSFER_ALREADY_PERFORMED, // Transfer has already beed performed.
     TRANSFER_CANCELLED, // Transfer was cancelled.
     INSUFFICIENT_BALANCE_OR_ALLOWANCE, // Insufficient balance or allowance for XCT transfer.
-    NOT_XCERT_OWNER // Is not the owner of Xcert.
+    NFTOKEN_NOT_ALLOWED // Is not the owner of NFToken.
   }
 
   /*
    * @dev contract addresses
    */
-  address XCT_TOKEN_CONTRACT;
+  address TOKEN_CONTRACT;
   address TOKEN_TRANSFER_PROXY_CONTRACT;
   address NFTOKEN_TRANSFER_PROXY_CONTRACT;
 
@@ -47,28 +47,28 @@ contract Trader {
   mapping(bytes32 => bool) public transferPerformed;
 
   /*
-   * @dev This event emmits when xcert changes ownership.
+   * @dev This event emmits when NFToken changes ownership.
    */
   event LogPerformTransfer(address _from,
                            address _to,
-                           address _xcert,
-                           uint256 _xcertId,
+                           address _nfToken,
+                           uint256 _nfTokenId,
                            address[] _feeAddresses,
                            uint256[] _feeAmounts,
                            uint256 _timestamp,
-                           bytes32 _xcertTransferClaim);
+                           bytes32 _nfTokenTransferClaim);
 
   /*
-   * @dev This event emmits when xcert transfer order is canceled.
+   * @dev This event emmits when NFToken transfer order is canceled.
    */
   event LogCancelTransfer(address _from,
                           address _to,
-                          address _xcert,
-                          uint256 _xcertId,
+                          address _nfToken,
+                          uint256 _nfTokenId,
                           address[] _feeAddresses,
                           uint256[] _feeAmounts,
                           uint256 _timestamp,
-                          bytes32 _xcertTransferClaim);
+                          bytes32 _nfTokenTransferClaim);
 
   /*
    * @dev This event emmits when an error occurs.
@@ -78,8 +78,8 @@ contract Trader {
 
 
   /*
-   * @dev Sets XCT token address, Token proxy address and xcert Proxy address.
-   * @param _xcertToken Address pointing to XCT Token contract.
+   * @dev Sets XCT token address, Token proxy address and NFToken Proxy address.
+   * @param _nfTokenToken Address pointing to XCT Token contract.
    * @param _tokenTransferProxy Address pointing to TokenTransferProxy contract.
    * @param _nfTokenTransferProxy Address pointing to none-fungible token transfer proxy contract.
    */
@@ -88,7 +88,7 @@ contract Trader {
                   address _nfTokenTransferProxy)
     public
   {
-    XCT_TOKEN_CONTRACT = _xctToken;
+    TOKEN_CONTRACT = _xctToken;
     TOKEN_TRANSFER_PROXY_CONTRACT = _tokenTransferProxy;
     NFTOKEN_TRANSFER_PROXY_CONTRACT = _nfTokenTransferProxy;
   }
@@ -101,7 +101,7 @@ contract Trader {
     view
     returns (address)
   {
-    return XCT_TOKEN_CONTRACT;
+    return TOKEN_CONTRACT;
   }
 
   /*
@@ -127,11 +127,11 @@ contract Trader {
   }
 
   /*
-   * @dev Performs the Xcert transfer.
-   * @param _from Address of Xcert sender.
-   * @param _to Address of Xcert reciever.
-   * @param _xcert Address of Xcert contract.
-   * @param _xcertId Id of Xcert (hashed certificate data that is transformed into uint256).
+   * @dev Performs the NFToken transfer.
+   * @param _from Address of NFToken sender.
+   * @param _to Address of NFToken reciever.
+   * @param _nfToken Address of NFToken contract.
+   * @param _nfTokenId Id of NFToken (hashed certificate data that is transformed into uint256).
    * @param _feeAddresses Addresses of all parties that need to get feeAmounts paid.
    * @param _feeAmounts Fee amounts of all the _feeAddresses (length of both have to be the same).
    * @param _timestamp Timestamp that represents the salt.
@@ -142,8 +142,8 @@ contract Trader {
    */
   function performTransfer(address _from,
                            address _to,
-                           address _xcert,
-                           uint256 _xcertId,
+                           address _nfToken,
+                           uint256 _nfTokenId,
                            address[] _feeAddresses,
                            uint256[] _feeAmounts,
                            uint256 _timestamp,
@@ -161,8 +161,8 @@ contract Trader {
     bytes32 claim = getTransferDataClaim(
       _from,
       _to,
-      _xcert,
-      _xcertId,
+      _nfToken,
+      _nfTokenId,
       _feeAddresses,
       _feeAmounts,
       _timestamp
@@ -196,24 +196,24 @@ contract Trader {
         return false;
       }
 
-      if(!_isAllowed(_from, _xcert, _xcertId))
+      if(!_isAllowed(_from, _nfToken, _nfTokenId))
       {
-        LogError(uint8(Errors.NOT_XCERT_OWNER), claim);
+        LogError(uint8(Errors.NFTOKEN_NOT_ALLOWED), claim);
         return false;
       }
     }
 
     transferPerformed[claim] = true;
 
-    _transferViaNFTokenTransferProxy(_xcert, _from, _to, _xcertId);
+    _transferViaNFTokenTransferProxy(_nfToken, _from, _to, _nfTokenId);
 
     _payfeeAmounts(_feeAddresses, _feeAmounts, _to);
 
     LogPerformTransfer(
       _from,
       _to,
-      _xcert,
-      _xcertId,
+      _nfToken,
+      _nfTokenId,
       _feeAddresses,
       _feeAmounts,
       _timestamp,
@@ -224,19 +224,19 @@ contract Trader {
   }
 
   /*
-   * @dev Cancels xcert transfer.
-   * @param _from Address of Xcert sender.
-   * @param _to Address of Xcert reciever.
-   * @param _xcert Address of Xcert contract.
-   * @param _xcertId Id of Xcert (hashed certificate data that is transformed into uint256).
+   * @dev Cancels NFToken transfer.
+   * @param _from Address of NFToken sender.
+   * @param _to Address of NFToken reciever.
+   * @param _nfToken Address of NFToken contract.
+   * @param _nfTokenId Id of NFToken (hashed certificate data that is transformed into uint256).
    * @param _feeAddresses Addresses of all parties that need to get feeAmounts paid.
    * @param _feeAmounts Fee amounts of all the _feeAddresses (length of both have to be the same).
    * @param _timestamp Timestamp that represents the salt.
    */
   function cancelTransfer(address _from,
                           address _to,
-                          address _xcert,
-                          uint256 _xcertId,
+                          address _nfToken,
+                          uint256 _nfTokenId,
                           address[] _feeAddresses,
                           uint256[] _feeAmounts,
                           uint256 _timestamp)
@@ -247,8 +247,8 @@ contract Trader {
     bytes32 claim = getTransferDataClaim(
       _from,
       _to,
-      _xcert,
-      _xcertId,
+      _nfToken,
+      _nfTokenId,
       _feeAddresses,
       _feeAmounts,
       _timestamp
@@ -261,8 +261,8 @@ contract Trader {
     LogCancelTransfer(
       _from,
       _to,
-      _xcert,
-      _xcertId,
+      _nfToken,
+      _nfTokenId,
       _feeAddresses,
       _feeAmounts,
       _timestamp,
@@ -272,10 +272,10 @@ contract Trader {
 
   /*
    * @dev Calculates keccak-256 hlaim of mint data from parameters.
-   * @param _from Address of Xcert sender.
-   * @param _to Address of Xcert reciever.
-   * @param _xcert Address of Xcert contract.
-   * @param _xcertId Id of Xcert (hashed certificate data that is transformed into uint256).
+   * @param _from Address of NFToken sender.
+   * @param _to Address of NFToken reciever.
+   * @param _nfToken Address of NFToken contract.
+   * @param _nfTokenId Id of NFToken (hashed certificate data that is transformed into uint256).
    * @param _feeAddresses Addresses of all parties that need to get feeAmounts paid.
    * @param _feeAmounts Fee amounts of all the _feeAddresses (length of both have to be the same).
    * @param _timestamp Timestamp that represents the salt.
@@ -283,8 +283,8 @@ contract Trader {
    */
   function getTransferDataClaim(address _from,
                                address _to,
-                               address _xcert,
-                               uint256 _xcertId,
+                               address _nfToken,
+                               uint256 _nfTokenId,
                                address[] _feeAddresses,
                                uint256[] _feeAmounts,
                                uint256 _timestamp)
@@ -296,8 +296,8 @@ contract Trader {
       address(this),
       _from,
       _to,
-      _xcert,
-      _xcertId,
+      _nfToken,
+      _nfTokenId,
       _feeAddresses,
       _feeAmounts,
       _timestamp
@@ -305,7 +305,7 @@ contract Trader {
   }
 
   /*
-   * @dev Verifies if xcert signature is valid.
+   * @dev Verifies if NFToken signature is valid.
    * @param _signer address of signer.
    * @param _claim Signed Keccak-256 hash.
    * @param _v ECDSA signature parameter v.
@@ -349,8 +349,8 @@ contract Trader {
       feeAmountsum = feeAmountsum.add(_feeAmounts[i]);
     }
 
-    if(_getBalance(XCT_TOKEN_CONTRACT, _to) < feeAmountsum
-      || _getAllowance(XCT_TOKEN_CONTRACT, _to) < feeAmountsum )
+    if(_getBalance(TOKEN_CONTRACT, _to) < feeAmountsum
+      || _getAllowance(TOKEN_CONTRACT, _to) < feeAmountsum )
     {
       return false;
     }
@@ -382,21 +382,21 @@ contract Trader {
 
 
   /*
-   * @dev Transfers Xcert via XcertProxy using transfer function.
-   * @param _xcert Address of Xcert to transfer.
-   * @param _from Address sending Xcert.
-   * @param _to Address receiving Xcert.
-   * @param _id Id of transfering Xcert.
-   * @return Success of Xcert transfer.
+   * @dev Transfers NFToken via NFTokenProxy using transfer function.
+   * @param _nfToken Address of NFToken to transfer.
+   * @param _from Address sending NFToken.
+   * @param _to Address receiving NFToken.
+   * @param _id Id of transfering NFToken.
+   * @return Success of NFToken transfer.
    */
-  function _transferViaNFTokenTransferProxy(address _xcert,
+  function _transferViaNFTokenTransferProxy(address _nfToken,
                                             address _from,
                                             address _to,
                                             uint256 _id)
     internal
   {
      NFTokenTransferProxy(NFTOKEN_TRANSFER_PROXY_CONTRACT)
-      .transferFrom(_xcert, _from, _to, _id);
+      .transferFrom(_nfToken, _from, _to, _id);
   }
 
   /*
@@ -437,25 +437,25 @@ contract Trader {
   }
 
   /*
-   * @dev Checks if we can transfer xcert.
-   * @param _from Address of Xcert sender.
-   * @param _xcert Address of Xcert contract.
-   * @param _xcertId Id of Xcert (hashed certificate data that is transformed into uint256).
-   + @return Permission if we can transfer xcert.
+   * @dev Checks if we can transfer NFToken.
+   * @param _from Address of NFToken sender.
+   * @param _nfToken Address of NFToken contract.
+   * @param _nfTokenId Id of NFToken (hashed certificate data that is transformed into uint256).
+   + @return Permission if we can transfer NFToken.
    */
   function _isAllowed(address _from,
-                      address _xcert,
-                      uint256 _xcertId)
+                      address _nfToken,
+                      uint256 _nfTokenId)
     internal
     constant
     returns (bool)
   {
-    if(ERC721(_xcert).getApproved(_xcertId) == NFTOKEN_TRANSFER_PROXY_CONTRACT)
+    if(ERC721(_nfToken).getApproved(_nfTokenId) == NFTOKEN_TRANSFER_PROXY_CONTRACT)
     {
       return true;
     }
 
-    if(ERC721(_xcert).isApprovedForAll(_from, NFTOKEN_TRANSFER_PROXY_CONTRACT))
+    if(ERC721(_nfToken).isApprovedForAll(_from, NFTOKEN_TRANSFER_PROXY_CONTRACT))
     {
       return true;
     }
@@ -480,7 +480,7 @@ contract Trader {
       if(_feeAddresses[i] != address(0) && _feeAmounts[i] > 0)
       {
         require(_transferViaTokenTransferProxy(
-          XCT_TOKEN_CONTRACT,
+          TOKEN_CONTRACT,
           _to,
           _feeAddresses[i],
           _feeAmounts[i]
