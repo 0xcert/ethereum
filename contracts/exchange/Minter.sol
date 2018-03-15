@@ -1,30 +1,39 @@
 pragma solidity ^0.4.19;
 
-
 import "../math/SafeMath.sol";
 import "../tokens/Xct.sol";
 import "../tokens/Xcert.sol";
 import "./TokenTransferProxy.sol";
 import "./XcertMintProxy.sol";
-import "./Exchange.sol";
 
 /*
  * @dev based on: https://github.com/0xProject/contracts/blob/master/contracts/Exchange.sol
  */
-contract MintableExchange is Exchange{
+contract Minter{
+
+  using SafeMath for uint256;
 
   /*
    * @dev Enum of possible errors.
    */
-  enum ErrorsMint {
+  enum Errors {
     MINT_ALREADY_PERFORMED, // Mint has already beed performed.
-    MINT_CANCELLED // Mint was cancelled.
+    MINT_CANCELLED, // Mint was cancelled.
+    INSUFFICIENT_BALANCE_OR_ALLOWANCE, // Insufficient balance or allowance for XCT transfer.
+    XCERT_NOT_ALLOWED // Minting is not allowed
   }
+
+  /*
+   * @dev Changes to state require at least 5000 gas.
+   */
+  uint16 constant public EXTERNAL_QUERY_GAS_LIMIT = 4999;
 
   /*
    * @dev contract addresses
    */
   address XCERT_MINT_PROXY_CONTRACT;
+  address XCT_TOKEN_CONTRACT;
+  address TOKEN_TRANSFER_PROXY_CONTRACT;
 
   /*
    * @dev Mapping of all canceled mints.
@@ -61,6 +70,12 @@ contract MintableExchange is Exchange{
                       bytes32 _xcertMintClaim);
 
   /*
+   * @dev This event emmits when an error occurs.
+   */
+  event LogError(uint8 indexed errorId,
+                 bytes32 indexed claim);
+
+  /*
    * @dev Structure of data needed for mint.
    */
   struct MintData{
@@ -81,22 +96,42 @@ contract MintableExchange is Exchange{
    * @param _tokenTransferProxy Address pointing to TokenTransferProxy contract.
    * @param _XcertProxy Address pointing to XcertProxy contract.
    */
-  function MintableExchange(address _xctToken,
-                            address _tokenTransferProxy,
-                            address _nfTokenTransferProxy,
-                            address _xcertMintProxy)
-           Exchange (_xctToken,
-                    _tokenTransferProxy,
-                    _nfTokenTransferProxy)
+  function Minter(address _xctToken,
+                  address _tokenTransferProxy,
+                  address _xcertMintProxy)
     public
   {
+    XCT_TOKEN_CONTRACT = _xctToken;
+    TOKEN_TRANSFER_PROXY_CONTRACT = _tokenTransferProxy;
     XCERT_MINT_PROXY_CONTRACT = _xcertMintProxy;
   }
 
+
   /*
-   * @dev Get addresses to all associated contracts (token, tokenTransferProxy,
-   * NFtokenTransferProxy, xcertMintProxy) .
-   * @return Array of addresses (token, tokenTransferProxy, nfTokenTransferProxy, xcertMintProxy)
+   * @dev Get address of token used in minter.
+   */
+  function getTokenAddress()
+    external
+    view
+    returns (address)
+  {
+    return XCT_TOKEN_CONTRACT;
+  }
+
+  /*
+   * @dev Get address of token transfer proxy used in minter.
+   */
+  function getTokenTransferProxyAddress()
+    external
+    view
+    returns (address)
+  {
+    return TOKEN_TRANSFER_PROXY_CONTRACT;
+  }
+
+
+  /*
+   * @dev Get address of xcert mint proxy used in minter.
    */
   function getXcertMintProxyAddress()
     external
@@ -170,13 +205,13 @@ contract MintableExchange is Exchange{
 
     if(mintPerformed[mintData.claim])
     {
-      LogError(uint8(ErrorsMint.MINT_ALREADY_PERFORMED), mintData.claim);
+      LogError(uint8(Errors.MINT_ALREADY_PERFORMED), mintData.claim);
       return false;
     }
 
     if(mintCancelled[mintData.claim])
     {
-      LogError(uint8(ErrorsMint.MINT_CANCELLED), mintData.claim);
+      LogError(uint8(Errors.MINT_CANCELLED), mintData.claim);
       return false;
     }
 
@@ -190,7 +225,7 @@ contract MintableExchange is Exchange{
 
       if(!_canMint(_xcert))
       {
-        LogError(uint8(Errors.NOT_XCERT_OWNER), mintData.claim);
+        LogError(uint8(Errors.XCERT_NOT_ALLOWED), mintData.claim);
         return false;
       }
     }
@@ -214,7 +249,6 @@ contract MintableExchange is Exchange{
 
     return true;
   }
-
 
   /*
    * @dev Cancels xcert mint.
@@ -298,6 +332,55 @@ contract MintableExchange is Exchange{
   }
 
   /*
+   * @dev Verifies if claim signature is valid.
+   * @param _signer address of signer.
+   * @param _claim Signed Keccak-256 hash.
+   * @param _v ECDSA signature parameter v.
+   * @param _r ECDSA signature parameters r.
+   * @param _s ECDSA signature parameters s.
+   * @return Validity of signature.
+   */
+  function isValidSignature(address _signer,
+                            bytes32 _claim,
+                            uint8 _v,
+                            bytes32 _r,
+                            bytes32 _s)
+    public
+    pure
+    returns (bool)
+  {
+    return _signer == ecrecover(
+      keccak256("\x19Ethereum Signed Message:\n32", _claim),
+      _v,
+      _r,
+      _s
+    );
+  }
+
+  /*
+   * @dev Transfers XCT tokens via TokenTransferProxy using transferFrom function.
+   * @param _token Address of token to transferFrom.
+   * @param _from Address transfering token.
+   * @param _to Address receiving token.
+   * @param _value Amount of token to transfer.
+   * @return Success of token transfer.
+   */
+  function _transferViaTokenTransferProxy(address _token,
+                                          address _from,
+                                          address _to,
+                                          uint _value)
+    internal
+    returns (bool)
+  {
+    return TokenTransferProxy(TOKEN_TRANSFER_PROXY_CONTRACT).transferFrom(
+      _token,
+      _from,
+      _to,
+      _value
+    );
+  }
+
+  /*
    * @dev Mints new Xcert via XcertProxy using mint function.
    * @param _xcert Address of Xcert to mint.
    * @param _id Id of Xcert to mint.
@@ -313,6 +396,69 @@ contract MintableExchange is Exchange{
       .mint(_mintData.xcert, _mintData.xcertId, _mintData.xcertUri, _mintData.to);
   }
 
+  /*
+   * @dev Get token balance of an address.
+   * The called token contract may attempt to change state, but will not be able to due to an added
+   * gas limit. Gas is limited to prevent reentrancy.
+   * @param _token Address of token.
+   * @param _owner Address of owner.
+   * @return Token balance of owner.
+   */
+  function _getBalance(address _token,
+                       address _owner)
+    internal
+    constant
+    returns (uint)
+  {
+    return ERC20(_token).balanceOf.gas(EXTERNAL_QUERY_GAS_LIMIT)(_owner);
+  }
+
+  /*
+   * @dev Get allowance of token given to TokenTransferProxy by an address.
+   * The called token contract may attempt to change state, but will not be able to due to an added
+   * gas limit. Gas is limited to prevent reentrancy.
+   * @param _token Address of token.
+   * @param _owner Address of owner.
+   * @return Allowance of token given to TokenTransferProxy by owner.
+   */
+  function _getAllowance(address _token,
+                         address _owner)
+    internal
+    constant
+    returns (uint)
+  {
+    return ERC20(_token).allowance.gas(EXTERNAL_QUERY_GAS_LIMIT)(
+      _owner,
+      TOKEN_TRANSFER_PROXY_CONTRACT
+    );
+  }
+
+  /*
+   * @dev Check is payer can pay the feeAmounts.
+   * @param _to Address of the payer.
+   * @param_ feeAmounts All the feeAmounts to be payed.
+   * @return Confirmation if feeAmounts can be payed.
+   */
+  function _canPayFee(address _to,
+                      uint256[] _feeAmounts)
+    internal
+    constant
+    returns (bool)
+  {
+    uint256 feeAmountsum = 0;
+
+    for(uint256 i; i < _feeAmounts.length; i++)
+    {
+      feeAmountsum = feeAmountsum.add(_feeAmounts[i]);
+    }
+
+    if(_getBalance(XCT_TOKEN_CONTRACT, _to) < feeAmountsum
+      || _getAllowance(XCT_TOKEN_CONTRACT, _to) < feeAmountsum )
+    {
+      return false;
+    }
+    return true;
+  }
 
   /**
    * @dev Checks if XcertMintProxy can mint specific _xcert.
@@ -335,5 +481,31 @@ contract MintableExchange is Exchange{
     returns (address)
   {
     return Xcert(_xcert).owner();
+  }
+
+  /*
+   * @dev Helper function that pays all the feeAmounts.
+   * @param _feeAddresses Addresses of all parties that need to get feeAmounts paid.
+   * @param _feeAmounts Fee amounts of all the _feeAddresses (length of both have to be the same).
+   * @param _to Address of the fee payer.
+   * @return Success of payments.
+   */
+  function _payfeeAmounts(address[] _feeAddresses,
+                          uint256[] _feeAmounts,
+                          address _to)
+    internal
+  {
+    for(uint256 i; i < _feeAddresses.length; i++)
+    {
+      if(_feeAddresses[i] != address(0) && _feeAmounts[i] > 0)
+      {
+        require(_transferViaTokenTransferProxy(
+          XCT_TOKEN_CONTRACT,
+          _to,
+          _feeAddresses[i],
+          _feeAmounts[i]
+        ));
+      }
+    }
   }
 }
