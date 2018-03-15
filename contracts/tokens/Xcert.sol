@@ -51,6 +51,11 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
   mapping (uint256 => string) private idToUri;
 
   /*
+   * @dev Mapping from NFToken ID to proof.
+   */
+  mapping (uint256 => string) private idToProof;
+
+  /*
    * @dev Mapping of supported intefraces.
    * You must not set element 0xffffffff to true.
    */
@@ -97,6 +102,11 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
    * The _target can mint new NFTokens.
    */
   event MintAuthorizedAddress(address indexed _target, bool _authorized);
+
+  /*
+   * @dev this emits everytime a new Xcert contract is deployed.
+   */
+  event XcertContractDeployed(address _contractAddress, string _name, string _symbol);
 
   /*
    * @dev Guarantees that the msg.sender is an owner or operator of the given NFToken.
@@ -153,6 +163,7 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
     supportedInterfaces[0x01ffc9a7] = true; // ERC165
     supportedInterfaces[0x6466353c] = true; // ERC721
     supportedInterfaces[0x5b5e139f] = true; // ERC721Metadata
+    XcertContractDeployed(address(this), _name, _symbol);
   }
 
   /*
@@ -325,20 +336,20 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
     canTransfer(_tokenId)
     validNFToken(_tokenId)
   {
-      address owner = idToOwner[_tokenId];
-      require(owner == _from);
-      require(_to != address(0));
+    address owner = idToOwner[_tokenId];
+    require(owner == _from);
+    require(_to != address(0));
 
-      _transfer(_to, _tokenId);
+    _transfer(_to, _tokenId);
 
-      // Do the callback after everything is done to avoid reentrancy attack
-      uint256 codeSize;
-      assembly { codeSize := extcodesize(_to) }
-      if (codeSize == 0) {
-          return;
-      }
-      bytes4 retval = ERC721TokenReceiver(_to).onERC721Received(_from, _tokenId, _data);
-      require(retval == MAGIC_ONERC721RECEIVED);
+    // Do the callback after everything is done to avoid reentrancy attack
+    uint256 codeSize;
+    assembly { codeSize := extcodesize(_to) }
+    if (codeSize == 0) {
+        return;
+    }
+    bytes4 retval = ERC721TokenReceiver(_to).onERC721Received(_from, _tokenId, _data);
+    require(retval == MAGIC_ONERC721RECEIVED);
   }
 
   /*
@@ -366,6 +377,7 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
    */
   function mint(address _to,
                 uint256 _id,
+                string _proof,
                 string _uri)
     external
     canMint()
@@ -375,8 +387,10 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
     require(_id != 0);
     require(idToOwner[_id] == address(0));
     require(utfStringLength(_uri) <= 2083);
+    require(bytes(_proof).length > 0);
 
     idToUri[_id] = _uri;
+    idToProof[_id] = _proof;
     addNFToken(_to, _id);
 
     Transfer(address(0), _to, _id);
@@ -388,19 +402,33 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
   * @param _tokenId Id of the NFToken we want to burn.
   */
  function burn(uint256 _tokenId)
-   canOperate(_tokenId)
-   validNFToken(_tokenId)
-   external
- {
+    canOperate(_tokenId)
+    validNFToken(_tokenId)
+    external
+  {
     if (getApproved(_tokenId) != 0) {
       clearApproval(msg.sender, _tokenId);
     }
 
     removeNFToken(msg.sender, _tokenId);
     delete idToUri[_tokenId];
+    delete idToProof[_tokenId];
 
     Transfer(msg.sender, address(0), _tokenId);
- }
+  }
+
+  /*
+   * @dev Gets proof for _tokenId.
+   * @param _tokenId Id of the NFToken we want to get proof of.
+   */
+  function getProof(uint256 _tokenId)
+    validNFToken(_tokenId)
+    external
+    view
+    returns (string)
+  {
+    return idToProof[_tokenId];
+  }
 
   /*
    * @dev Clears the current approval of a given NFToken ID.
