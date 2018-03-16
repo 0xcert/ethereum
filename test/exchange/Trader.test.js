@@ -16,6 +16,7 @@ contract('Trader', (accounts) => {
   let id1 = web3.sha3('test1');
   let id2 = web3.sha3('test2');
   let id3 = web3.sha3('test3');
+  let mockProof = "1e205550c271490347e5e2393a02e94d284bbe9903f023ba098355b8d75974c8";
 
   beforeEach(async () => {
     nfTokenProxy = await NFTokenTransferProxy.new();
@@ -28,9 +29,9 @@ contract('Trader', (accounts) => {
     await token.transfer(accounts[2], 200);
     await token.transfer(accounts[3], 200);
 
-    await xcert.mint(accounts[1], id1, 'url');
-    await xcert.mint(accounts[2], id2, 'url2');
-    await xcert.mint(accounts[3], id3, 'url3');
+    await xcert.mint(accounts[1], id1, mockProof, 'url');
+    await xcert.mint(accounts[2], id2, mockProof, 'url2');
+    await xcert.mint(accounts[3], id3, mockProof, 'url3');
 
     trader = await Trader.new(token.address, tokenProxy.address, nfTokenProxy.address);
     nfTokenProxy.addAuthorizedAddress(trader.address);
