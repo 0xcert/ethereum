@@ -3,6 +3,7 @@ pragma solidity ^0.4.19;
 import "../math/SafeMath.sol";
 import "../tokens/Xct.sol";
 import "../tokens/Xcert.sol";
+import "../tokens/ERC20.sol";
 import "./TokenTransferProxy.sol";
 import "./XcertMintProxy.sol";
 
@@ -50,11 +51,13 @@ contract Minter{
    */
   event LogPerformMint(address _to,
                        address _xcert,
-                       uint256 _xcertId,
-                       string _xcertUri,
+                       uint256 _id,
+                       string _proof,
+                       string _uri,
                        address[] _feeAddresses,
                        uint256[] _feeAmounts,
-                       uint256 _timestamp,
+                       uint256 _seed,
+                       uint256 _expirationTimestamp,
                        bytes32 _xcertMintClaim);
 
   /*
@@ -62,11 +65,13 @@ contract Minter{
    */
   event LogCancelMint(address _to,
                       address _xcert,
-                      uint256 _xcertId,
-                      string _xcertUri,
+                      uint256 _id,
+                      string _proof,
+                      string _uri,
                       address[] _feeAddresses,
                       uint256[] _feeAmounts,
-                      uint256 _timestamp,
+                      uint256 _seed,
+                      uint256 _expirationTimestamp,
                       bytes32 _xcertMintClaim);
 
   /*
@@ -82,11 +87,13 @@ contract Minter{
     address owner;
     address to;
     address xcert;
-    uint256 xcertId;
-    string xcertUri;
+    uint256 id;
+    string proof;
+    string uri;
     address[] feeAddresses;
     uint256[] feeAmounts;
-    uint256 timestamp;
+    uint256 seed;
+    uint256 expirationTimestamp;
     bytes32 claim;
   }
 
@@ -144,25 +151,23 @@ contract Minter{
 
   /*
    * @dev Performs Xcert mint directly to the taker.
-   * @param _to Address of Xcert reciever.
-   * @param _xcert Address of Xcert contract.
-   * @param _xcertId Id of Xcert (hashed certificate data that is transformed into uint256).
-   * @param _xcertId Uri of Xcert (metadata uri).
-   * @param _feeAddresses Addresses of all parties that need to get feeAmounts paid.
-   * @param _feeAmounts Fee amounts of all the _feeAddresses (length of both have to be the same).
-   * @param _timestamp Timestamp that represents the salt.
+   * @param _addresses Array of all addresses that go as following: 0 = Address of Xcert reciever,
+   * 1 = Address of Xcert contract, 2 and more = Addresses of all parties that need to get
+   * feeAmounts paid.
+   * @param _uints Array of all uints that go as following: 0 = Id of Xcert, 1 = _seed Timestamp
+   * that represents the salt, 2 = Timestamp of when the mint claim expires, 3 and more = Fee
+   * amounts of all the _feeAddresses (length of both have to be the same).
+   * @param _proof Proof of Xcert.
+   * @param _uri Uri of Xcert (metadata uri).
    * @param _v ECDSA signature parameter v.
    * @param _r ECDSA signature parameters r.
    * @param _s ECDSA signature parameters s.
-   * @param _s _throwIfNotMintable Test the mint before performing.
+   * @param _throwIfNotMintable Test the mint before performing.
    */
-  function performMint(address _to,
-                       address _xcert,
-                       uint256 _xcertId,
-                       string _xcertUri,
-                       address[] _feeAddresses,
-                       uint256[] _feeAmounts,
-                       uint256 _timestamp,
+  function performMint(address[] _addresses,
+                       uint256[] _uints,
+                       string _proof,
+                       string _uri,
                        uint8 _v,
                        bytes32 _r,
                        bytes32 _s,
@@ -171,29 +176,29 @@ contract Minter{
     returns (bool)
   {
 
+    require(_addresses.length.add(1) == _uints.length);
+
     MintData memory mintData = MintData({
-      owner: _getOwner(_xcert),
-      to: _to,
-      xcert: _xcert,
-      xcertId: _xcertId,
-      xcertUri: _xcertUri,
-      feeAddresses: _feeAddresses,
-      feeAmounts: _feeAmounts,
-      timestamp: _timestamp,
+      owner: _getOwner(_addresses[1]),
+      to: _addresses[0],
+      xcert: _addresses[1],
+      id: _uints[0],
+      proof: _proof,
+      uri: _uri,
+      feeAddresses: _getAddressSubArray(_addresses, 2),
+      feeAmounts: _getUintSubArray(_uints, 3),
+      seed: _uints[1],
+      expirationTimestamp: _uints[2],
       claim: getMintDataClaim(
-        _to,
-        _xcert,
-        _xcertId,
-        _xcertUri,
-        _feeAddresses,
-        _feeAmounts,
-        _timestamp
+        _addresses,
+        _uints,
+        _proof,
+        _uri
       )
     });
 
-    require(_feeAddresses.length == _feeAmounts.length);
-    require(_to == msg.sender);
-    require(mintData.owner != _to);
+    require(mintData.to == msg.sender);
+    require(mintData.owner != mintData.to);
 
     require(isValidSignature(
       mintData.owner,
@@ -202,6 +207,8 @@ contract Minter{
       _r,
       _s
     ));
+
+    require(mintData.expirationTimestamp >= now);
 
     if(mintPerformed[mintData.claim])
     {
@@ -217,13 +224,13 @@ contract Minter{
 
     if (_throwIfNotMintable)
     {
-      if(!_canPayFee(_to, _feeAmounts))
+      if(!_canPayFee(mintData.to, mintData.feeAmounts))
       {
         LogError(uint8(Errors.INSUFFICIENT_BALANCE_OR_ALLOWANCE), mintData.claim);
         return false;
       }
 
-      if(!_canMint(_xcert))
+      if(!_canMint(mintData.xcert))
       {
         LogError(uint8(Errors.XCERT_NOT_ALLOWED), mintData.claim);
         return false;
@@ -234,16 +241,18 @@ contract Minter{
 
     require(_mintViaXcertMintProxy(mintData));
 
-    _payfeeAmounts(_feeAddresses, _feeAmounts, _to);
+    _payfeeAmounts(mintData.feeAddresses, mintData.feeAmounts, mintData.to);
 
     LogPerformMint(
-      _to,
-      _xcert,
-      _xcertId,
-      _xcertUri,
-      _feeAddresses,
-      _feeAmounts,
-      _timestamp,
+      mintData.to,
+      mintData.xcert,
+      mintData.id,
+      mintData.proof,
+      mintData.uri,
+      mintData.feeAddresses,
+      mintData.feeAmounts,
+      mintData.seed,
+      mintData.expirationTimestamp,
       mintData.claim
     );
 
@@ -252,33 +261,28 @@ contract Minter{
 
   /*
    * @dev Cancels xcert mint.
-   * @param _to Address of Xcert reciever.
-   * @param _xcert Address of Xcert contract.
-   * @param _xcertId Id of Xcert (hashed certificate data that is transformed into uint256).
-   * @param _xcertId Uri of Xcert (metadata uri).
-   * @param _feeAddresses Addresses of all parties that need to get feeAmounts paid.
-   * @param _feeAmounts Fee amounts of all the _feeAddresses (length of both have to be the same).
-   * @param _timestamp Timestamp that represents the salt.
+   * @param _addresses Array of all addresses that go as following: 0 = Address of Xcert reciever,
+   * 1 = Address of Xcert contract, 2 and more = Addresses of all parties that need to get
+   * feeAmounts paid.
+   * @param _uints Array of all uints that go as following: 0 = Id of Xcert, 1 = _seed Timestamp
+   * that represents the salt, 2 = Timestamp of when the mint claim expires, 3 and more = Fee
+   * amounts of all the _feeAddresses (length of both have to be the same).
+   * @param _proof Proof of Xcert.
+   * @param _uri Uri of Xcert (metadata uri).
    */
-  function cancelMint(address _to,
-                      address _xcert,
-                      uint256 _xcertId,
-                      string _xcertUri,
-                      address[] _feeAddresses,
-                      uint256[] _feeAmounts,
-                      uint256 _timestamp)
+  function cancelMint(address[] _addresses,
+                      uint256[] _uints,
+                      string _proof,
+                      string _uri)
     public
   {
-    require(msg.sender == _getOwner(_xcert));
+    require(msg.sender == _getOwner(_addresses[1]));
 
     bytes32 claim = getMintDataClaim(
-      _to,
-      _xcert,
-      _xcertId,
-      _xcertUri,
-      _feeAddresses,
-      _feeAmounts,
-      _timestamp
+      _addresses,
+      _uints,
+      _proof,
+      _uri
     );
 
     require(!mintPerformed[claim]);
@@ -286,48 +290,50 @@ contract Minter{
     mintCancelled[claim] = true;
 
     LogCancelMint(
-      _to,
-      _xcert,
-      _xcertId,
-      _xcertUri,
-      _feeAddresses,
-      _feeAmounts,
-      _timestamp,
+      _addresses[0],
+      _addresses[1],
+      _uints[0],
+      _proof,
+      _uri,
+      _getAddressSubArray(_addresses, 2),
+      _getUintSubArray(_uints, 3),
+      _uints[1],
+      _uints[2],
       claim
     );
   }
 
   /*
    * @dev Calculates keccak-256 hash of mint data from parameters.
-   * @param _to Address of Xcert reciever.
-   * @param _xcert Address of Xcert contract.
-   * @param _xcertId Id of Xcert (claimed certificate data that is transformed into uint256).
-   * @param _xcertUri Uri poiting to Xcert metadata.
-   * @param _feeAddresses Addresses of all parties that need to get feeAmounts paid.
-   * @param _feeAmounts Fee amounts of all the _feeAddresses (length of both have to be the same).
-   * @param _timestamp Timestamp that represents the salt.
+   * @param _addresses Array of all addresses that go as following: 0 = Address of Xcert reciever,
+   * 1 = Address of Xcert contract, 2 and more = Addresses of all parties that need to get
+   * feeAmounts paid.
+   * @param _uints Array of all uints that go as following: 0 = Id of Xcert, 1 = _seed Timestamp
+   * that represents the salt, 2 = Timestamp of when the mint claim expires, 3 and more = Fee
+   * amounts of all the _feeAddresses (length of both have to be the same).
+   * @param _proof Proof of Xcert.
+   * @param _uri Uri of Xcert (metadata uri).
    * @returns keccak-hash of mint data.
    */
-  function getMintDataClaim(address _to,
-                           address _xcert,
-                           uint256 _xcertId,
-                           string _xcertUri,
-                           address[] _feeAddresses,
-                           uint256[] _feeAmounts,
-                           uint256 _timestamp)
+  function getMintDataClaim(address[] _addresses,
+                            uint256[] _uints,
+                            string _proof,
+                            string _uri)
     public
     constant
     returns (bytes32)
   {
     return keccak256(
       address(this),
-      _to,
-      _xcert,
-      _xcertId,
-      _xcertUri,
-      _feeAddresses,
-      _feeAmounts,
-      _timestamp
+      _addresses[0],
+      _addresses[1],
+      _uints[0],
+      _proof,
+      _uri,
+      _getAddressSubArray(_addresses, 2),
+      _getUintSubArray(_uints, 3),
+      _uints[1],
+      _uints[2]
     );
   }
 
@@ -382,10 +388,7 @@ contract Minter{
 
   /*
    * @dev Mints new Xcert via XcertProxy using mint function.
-   * @param _xcert Address of Xcert to mint.
-   * @param _id Id of Xcert to mint.
-   * @param _uri Uri of Xcert to mint.
-   * @param _to Address receiving Xcert.
+   * @param _mintData Structure of all mint data.
    * @return Success of Xcert mint.
    */
   function _mintViaXcertMintProxy(MintData _mintData)
@@ -393,7 +396,7 @@ contract Minter{
     returns (bool)
   {
     return XcertMintProxy(XCERT_MINT_PROXY_CONTRACT)
-      .mint(_mintData.xcert, _mintData.xcertId, _mintData.xcertUri, _mintData.to);
+      .mint(_mintData.xcert, _mintData.id, _mintData.proof, _mintData.uri, _mintData.to);
   }
 
   /*
@@ -481,6 +484,51 @@ contract Minter{
     returns (address)
   {
     return Xcert(_xcert).owner();
+  }
+
+  /*
+   * @dev Creates a sub array from address array.
+   * @param _array Array from which we will make a sub array.
+   * @param _index Index from which our sub array will be made.
+   */
+  function _getAddressSubArray(address[] _array, uint256 _index)
+    internal
+    pure
+    returns (address[])
+  {
+    require(_array.length > _index);
+    address[] memory subArray = new address[](_array.length.sub(_index));
+    uint256 j = 0;
+    for(uint256 i = _index; i < _array.length; i++)
+    {
+      subArray[j] = _array[i];
+      j++;
+    }
+
+    return subArray;
+  }
+
+  /*
+   * @dev Creates a sub array from uint256 array.
+   * @param _array Array from which we will make a sub array.
+   * @param _index Index from which our sub array will be made.
+   */
+  function _getUintSubArray(uint256[] _array,
+                            uint256 _index)
+    internal
+    pure
+    returns (uint256[])
+  {
+    require(_array.length > _index);
+    uint256[] memory subArray = new uint256[](_array.length.sub(_index));
+    uint256 j = 0;
+    for(uint256 i = _index; i < _array.length; i++)
+    {
+      subArray[j] = _array[i];
+      j++;
+    }
+
+    return subArray;
   }
 
   /*

@@ -18,6 +18,7 @@ contract('Minter', (accounts) => {
   let id2 = web3.sha3('test2');
   let id3 = web3.sha3('test3');
   let uri = "http://url.com"
+  let mockProof = "1e205550c271490347e5e2393a02e94d284bbe9903f023ba098355b8d75974c8";
 
   beforeEach(async () => {
     tokenProxy = await TokenTransferProxy.new();
@@ -55,28 +56,43 @@ contract('Minter', (accounts) => {
   describe('hashing', function () {
     var testArrayAccount = [accounts[3], accounts[5]];
     var testArrayAmount = [1, 10];
+
+    var timestamp = 1521195657;
+    var expirationTimestamp = 1821195657;
+
+    var claimAccountArray =[accounts[1], accounts[2], accounts[3], accounts[5]];
+    var claimUintArray = [id1, timestamp, expirationTimestamp, 1, 10];
+
+    var contractHash;
+
+    beforeEach(async () => {
+      contractHash = await minter.getMintDataClaim(claimAccountArray, claimUintArray, mockProof, uri);
+    });
+
     it('compares the same local and contract hash', async () => {
-      var contractHash = await minter.getMintDataClaim(accounts[1], accounts[2], id1, uri, testArrayAccount, testArrayAmount, 123);
-      var localHash = web3Util.soliditySha3(minter.address, accounts[1], accounts[2], id1, uri, {t: 'address[]', v:testArrayAccount}, {t: 'uint256[]', v:testArrayAmount}, 123);
+      var localHash = web3Util.soliditySha3(minter.address, accounts[1], accounts[2], id1, mockProof, uri, {t: 'address[]', v:testArrayAccount}, {t: 'uint256[]', v:testArrayAmount}, timestamp, expirationTimestamp);
       assert.equal(contractHash, localHash);
     });
 
     it('compares different local and contract hash', async () => {
-      var contractHash = await minter.getMintDataClaim(accounts[1], accounts[2], id1, uri, testArrayAccount, testArrayAmount, 123);
-      var localHash = web3Util.soliditySha3(minter.address, accounts[1], accounts[2], id1, uri, {t: 'address[]', v:testArrayAccount}, {t: 'uint256[]', v:testArrayAmount}, 124);
+      var localHash = web3Util.soliditySha3(minter.address, accounts[1], accounts[2], id1, mockProof, uri, {t: 'address[]', v:testArrayAccount}, {t: 'uint256[]', v:testArrayAmount}, timestamp, 34);
       assert.notEqual(contractHash, localHash);
     });
   });
 
   describe('signature', function () {
-    var testArray = [1,2];
     var hash;
     var r;
     var s;
     var v;
 
+    var timestamp = 1521195657;
+    var expirationTimestamp = 1821195657;
+    var claimAccountArray =[accounts[1], accounts[2], accounts[3], accounts[5]];
+    var claimUintArray = [id1, timestamp, expirationTimestamp, 1, 10];
+
     beforeEach(async () => {
-      hash = await minter.getMintDataClaim(accounts[1], accounts[2], id1, uri, testArray, testArray, 123);
+      hash = await minter.getMintDataClaim(claimAccountArray, claimUintArray, mockProof, uri);
       var signature = web3.eth.sign(accounts[0], hash);
 
       r = signature.substr(0, 66);
@@ -99,7 +115,7 @@ contract('Minter', (accounts) => {
       assert.equal(valid, false);
     });
 
-    it('correctly validates signature data from another accout', async () => {
+    it('correctly validates signature data from another account', async () => {
       var signature = web3.eth.sign(accounts[1], hash);
 
       r = signature.substr(0, 66);
@@ -120,17 +136,21 @@ contract('Minter', (accounts) => {
       var r;
       var s;
       var v;
-      var timestamp;
+      var timestamp = 1521195657;
+      var expirationTimestamp = 1821195657;
       var addressArray = [accounts[1]];
       var amountArray = [20];
-
       var owner = accounts[0];
       var to = accounts[2];
       var thirdParty = accounts[3];
 
+      var mintAddressArray;
+      var mintUintArray;
+
       beforeEach(async () => {
-        timestamp = 234235345325;
-        var hash = web3Util.soliditySha3(minter.address, to, xcert.address, id1, uri, {t: 'address[]', v:addressArray}, {t: 'uint256[]', v:amountArray}, timestamp);
+        mintAddressArray = [to, xcert.address, accounts[1]];
+        mintUintArray = [id1, timestamp, expirationTimestamp, 20];
+        var hash = web3Util.soliditySha3(minter.address, to, xcert.address, id1, mockProof, uri, {t: 'address[]', v:addressArray}, {t: 'uint256[]', v:amountArray}, timestamp, expirationTimestamp);
         var signature = web3.eth.sign(owner, hash);
 
         r = signature.substr(0, 66);
@@ -141,14 +161,14 @@ contract('Minter', (accounts) => {
       describe('cancel', function () {
 
         it('successfuly cancels mint', async () => {
-          var { logs } = await minter.cancelMint(to, xcert.address, id1, uri, addressArray, amountArray, timestamp, {from: owner});
+          var { logs } = await minter.cancelMint(mintAddressArray, mintUintArray, mockProof, uri, {from: owner});
 
           let cancelEvent = logs.find(e => e.event === 'LogCancelMint');
           assert.notEqual(cancelEvent, undefined);
         });
 
         it('throws when someone else then the minter tries to cancel it', async () => {
-          await assertRevert(minter.cancelMint(to, xcert.address, id1, uri, addressArray, amountArray, timestamp, {from: thirdParty}));
+          await assertRevert(minter.cancelMint(mintAddressArray, mintUintArray, mockProof, uri, {from: thirdParty}));
         });
 
         it('throws when trying to cancel an already performed mint', async () => {
@@ -156,12 +176,12 @@ contract('Minter', (accounts) => {
           await token.approve(tokenProxy.address, 20, {from: to});
           await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
 
-          let { logs } = await minter.performMint(to, xcert.address, id1, uri, addressArray, amountArray, timestamp, v, r, s, false, {from: to});
+          let { logs } = await minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, false, {from: to});
 
           let event = logs.find(e => e.event === 'LogPerformMint');
           assert.notEqual(event, undefined);
 
-          await assertRevert(minter.cancelMint(to, xcert.address, id1, uri, addressArray, amountArray, timestamp, {from: owner}));
+          await assertRevert(minter.cancelMint(mintAddressArray, mintUintArray, mockProof, uri, {from: owner}));
         });
 
       });
@@ -174,7 +194,7 @@ contract('Minter', (accounts) => {
             await token.approve(tokenProxy.address, 20, {from: to});
             await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
 
-            let { logs } = await minter.performMint(to, xcert.address, id1, uri, addressArray, amountArray, timestamp, v, r, s, true, {from: to});
+            let { logs } = await minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to});
 
             let event = logs.find(e => e.event === 'LogPerformMint');
             assert.notEqual(event, undefined);
@@ -193,37 +213,35 @@ contract('Minter', (accounts) => {
             await token.approve(tokenProxy.address, 20, {from: to});
             await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
 
-            await assertRevert(minter.performMint(to, xcert.address, id1, uri, addressArray, amountArray, timestamp, v, r, s, true, {from: thirdParty}));
-          });
-
-          it('fails when trying to perform canceled mint', async () => {
-            await minter.cancelMint(to, xcert.address, id1, uri, addressArray, amountArray, timestamp, {from: owner});
-            await token.approve(tokenProxy.address, 20, {from: to});
-            await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
-
-            let { logs } = await minter.performMint(to, xcert.address, id1, uri, addressArray, amountArray, timestamp, v, r, s, true, {from: to});
-
-            let event = logs.find(e => e.event === 'LogError');
-            assert.notEqual(event, undefined);
+            await assertRevert(minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: thirdParty}));
           });
 
           it('throws when fee amount array is no the same length then feeRecipient', async () => {
             await token.approve(tokenProxy.address, 20, {from: to});
             await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
-            await assertRevert(minter.performMint(to, xcert.address, id1, uri, addressArray, [20,10], timestamp, v, r, s, true, {from: to}));
+            mintUintArray[4] = 10;
+            await assertRevert(minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to}));
           });
 
-          it('throws when _from is the owner addresses are the same', async () => {
+          it('throws when _from and the owner addresses are the same', async () => {
             await token.approve(tokenProxy.address, 20, {from: to});
             await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
-            await assertRevert(minter.performMint(owner, xcert.address, id1, uri, addressArray, amountArray, timestamp, v, r, s, true, {from: to}));
+            mintAddressArray[0] = owner;
+            await assertRevert(minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to}));
+          });
+
+          it('throws if current time is after expirationTimestamp', async () => {
+            await token.approve(tokenProxy.address, 20, {from: to});
+            await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
+            mintUintArray[2] = timestamp;
+            await assertRevert(minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to}));
           });
 
           it('fails when trying to perform already performed mint', async () => {
             await token.approve(tokenProxy.address, 20, {from: to});
             await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
-            await minter.performMint(to, xcert.address, id1, uri, addressArray, amountArray, timestamp, v, r, s, true, {from: to});
-            let { logs } = await minter.performMint(to, xcert.address, id1, uri, addressArray, amountArray, timestamp, v, r, s, true, {from: to});
+            await minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to});
+            let { logs } = await minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to});
 
             let event = logs.find(e => e.event === 'LogError');
             assert.notEqual(event, undefined);
@@ -232,7 +250,18 @@ contract('Minter', (accounts) => {
           it('fails when approved token amount is not sufficient', async () => {
             await token.approve(tokenProxy.address, 10, {from: to});
             await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
-            let { logs } = await minter.performMint(to, xcert.address, id1, uri, addressArray, amountArray, timestamp, v, r, s, true, {from: to});
+            let { logs } = await minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to});
+
+            let event = logs.find(e => e.event === 'LogError');
+            assert.notEqual(event, undefined);
+          });
+
+          it('fails when trying to perform canceled mint', async () => {
+            await minter.cancelMint(mintAddressArray, mintUintArray, mockProof, uri, {from: owner});
+            await token.approve(tokenProxy.address, 20, {from: to});
+            await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
+
+            let { logs } = await minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to});
 
             let event = logs.find(e => e.event === 'LogError');
             assert.notEqual(event, undefined);
@@ -240,7 +269,7 @@ contract('Minter', (accounts) => {
 
           it('fails when does not have mint rights', async () => {
             await token.approve(tokenProxy.address, 20, {from: to});
-            let { logs } = await minter.performMint(to, xcert.address, id1, uri, addressArray, amountArray, timestamp, v, r, s, true, {from: to});
+            let { logs } = await minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to});
 
             let event = logs.find(e => e.event === 'LogError');
             assert.notEqual(event, undefined);
@@ -253,12 +282,12 @@ contract('Minter', (accounts) => {
           it('throws when approved token amount is not sufficient', async () => {
             await token.approve(tokenProxy.address, 10, {from: to});
             await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
-            await assertRevert(minter.performMint(to, xcert.address, id1, uri, addressArray, amountArray, timestamp, v, r, s, false, {from: to}));
+            await assertRevert(minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, false, {from: to}));
           });
 
           it('throws when does not have mint rights', async () => {
             await token.approve(tokenProxy.address, 20, {from: to});
-            await assertRevert(minter.performMint(to, xcert.address, id1, uri, addressArray, amountArray, timestamp, v, r, s, false, {from: to}));
+            await assertRevert(minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, false, {from: to}));
           });
 
         });
