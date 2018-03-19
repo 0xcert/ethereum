@@ -55,7 +55,8 @@ contract Trader {
                            uint256 _nfTokenId,
                            address[] _feeAddresses,
                            uint256[] _feeAmounts,
-                           uint256 _timestamp,
+                           uint256 _seed,
+                           uint256 _expirationTimestamp,
                            bytes32 _nfTokenTransferClaim);
 
   /*
@@ -67,7 +68,8 @@ contract Trader {
                           uint256 _nfTokenId,
                           address[] _feeAddresses,
                           uint256[] _feeAmounts,
-                          uint256 _timestamp,
+                          uint256 _seed,
+                          uint256 _expirationTimestamp,
                           bytes32 _nfTokenTransferClaim);
 
   /*
@@ -76,6 +78,21 @@ contract Trader {
   event LogError(uint8 indexed errorId,
                  bytes32 indexed claim);
 
+
+  /*
+   * @dev Structure of data needed for a trade.
+   */
+  struct TransferData{
+    address from;
+    address to;
+    address nfToken;
+    uint256 id;
+    address[] feeAddresses;
+    uint256[] feeAmounts;
+    uint256 seed;
+    uint256 expirationTimestamp;
+    bytes32 claim;
+  }
 
   /*
    * @dev Sets XCT token address, Token proxy address and NFToken Proxy address.
@@ -128,25 +145,19 @@ contract Trader {
 
   /*
    * @dev Performs the NFToken transfer.
-   * @param _from Address of NFToken sender.
-   * @param _to Address of NFToken reciever.
-   * @param _nfToken Address of NFToken contract.
-   * @param _nfTokenId Id of NFToken (hashed certificate data that is transformed into uint256).
-   * @param _feeAddresses Addresses of all parties that need to get feeAmounts paid.
-   * @param _feeAmounts Fee amounts of all the _feeAddresses (length of both have to be the same).
-   * @param _timestamp Timestamp that represents the salt.
+   * @param _addresses Array of all addresses that go as following: 0 = Address of NFToken sender,
+   * 1 = Address of NFToken reciever, 2 = Address of NFToken contract, 3 and more = Addresses of all
+   * parties that need to get feeAmounts paid.
+   * @param _uints Array of all uints that go as following: 0 = Id of NFToken, 1 = _seed Timestamp
+   * that represents the salt, 2 = Timestamp of when the transfer claim expires,3 and more = Fee
+   * amounts of all the _feeAddresses (length of both have to be the same).
    * @param _v ECDSA signature parameter v.
    * @param _r ECDSA signature parameters r.
    * @param _s ECDSA signature parameters s.
-   * @param _s _throwIfNotTransferable Test the transfer before performing.
+   * @param _throwIfNotTransferable Test the transfer before performing.
    */
-  function performTransfer(address _from,
-                           address _to,
-                           address _nfToken,
-                           uint256 _nfTokenId,
-                           address[] _feeAddresses,
-                           uint256[] _feeAmounts,
-                           uint256 _timestamp,
+  function performTransfer(address[] _addresses,
+                           uint256[] _uints,
                            uint8 _v,
                            bytes32 _r,
                            bytes32 _s,
@@ -154,70 +165,79 @@ contract Trader {
     public
     returns (bool)
   {
-    require(_feeAddresses.length == _feeAmounts.length);
-    require(_to == msg.sender);
-    require(_from != _to);
+    require(_addresses.length == _uints.length);
 
-    bytes32 claim = getTransferDataClaim(
-      _from,
-      _to,
-      _nfToken,
-      _nfTokenId,
-      _feeAddresses,
-      _feeAmounts,
-      _timestamp
-    );
+    TransferData memory transferData = TransferData({
+      from: _addresses[0],
+      to: _addresses[1],
+      nfToken: _addresses[2],
+      id: _uints[0],
+      feeAddresses: _getAddressSubArray(_addresses, 3),
+      feeAmounts: _getUintSubArray(_uints, 3),
+      seed: _uints[1],
+      expirationTimestamp: _uints[2],
+      claim: getTransferDataClaim(
+        _addresses,
+        _uints
+      )
+    });
+
+    require(transferData.to == msg.sender);
+    require(transferData.from != transferData.to);
 
     require(isValidSignature(
-      _from,
-      claim,
+      transferData.from,
+      transferData.claim,
       _v,
       _r,
       _s
     ));
 
-    if(transferPerformed[claim])
+    require(transferData.expirationTimestamp >= now);
+
+    if(transferPerformed[transferData.claim])
     {
-      LogError(uint8(Errors.TRANSFER_ALREADY_PERFORMED), claim);
+      LogError(uint8(Errors.TRANSFER_ALREADY_PERFORMED), transferData.claim);
       return false;
     }
 
-    if(transferCancelled[claim])
+    if(transferCancelled[transferData.claim])
     {
-      LogError(uint8(Errors.TRANSFER_CANCELLED), claim);
+      LogError(uint8(Errors.TRANSFER_CANCELLED), transferData.claim);
       return false;
     }
 
     if (_throwIfNotTransferable)
     {
-      if(!_canPayFee(_to, _feeAmounts))
+      if(!_canPayFee(transferData.to, transferData.feeAmounts))
       {
-        LogError(uint8(Errors.INSUFFICIENT_BALANCE_OR_ALLOWANCE), claim);
+        LogError(uint8(Errors.INSUFFICIENT_BALANCE_OR_ALLOWANCE), transferData.claim);
         return false;
       }
 
-      if(!_isAllowed(_from, _nfToken, _nfTokenId))
+      if(!_isAllowed(transferData.from, transferData.nfToken, transferData.id))
       {
-        LogError(uint8(Errors.NFTOKEN_NOT_ALLOWED), claim);
+        LogError(uint8(Errors.NFTOKEN_NOT_ALLOWED), transferData.claim);
         return false;
       }
     }
 
-    transferPerformed[claim] = true;
+    transferPerformed[transferData.claim] = true;
 
-    _transferViaNFTokenTransferProxy(_nfToken, _from, _to, _nfTokenId);
+    _transferViaNFTokenTransferProxy(transferData);
 
-    _payfeeAmounts(_feeAddresses, _feeAmounts, _to);
+    _payfeeAmounts(transferData.feeAddresses, transferData.feeAmounts, transferData.to);
 
     LogPerformTransfer(
-      _from,
-      _to,
-      _nfToken,
-      _nfTokenId,
-      _feeAddresses,
-      _feeAmounts,
-      _timestamp,
-      claim
+      transferData.from,
+      transferData.to,
+      transferData.nfToken,
+      transferData.id,
+      transferData.feeAddresses,
+      transferData.feeAmounts,
+      transferData.seed,
+      transferData.expirationTimestamp,
+      transferData.claim
     );
 
     return true;
@@ -225,33 +245,22 @@ contract Trader {
 
   /*
    * @dev Cancels NFToken transfer.
-   * @param _from Address of NFToken sender.
-   * @param _to Address of NFToken reciever.
-   * @param _nfToken Address of NFToken contract.
-   * @param _nfTokenId Id of NFToken (hashed certificate data that is transformed into uint256).
-   * @param _feeAddresses Addresses of all parties that need to get feeAmounts paid.
-   * @param _feeAmounts Fee amounts of all the _feeAddresses (length of both have to be the same).
-   * @param _timestamp Timestamp that represents the salt.
+   * @param _addresses Array of all addresses that go as following: 0 = Address of NFToken sender,
+   * 1 = Address of NFToken reciever, 2 = Address of NFToken contract, 3 and more = Addresses of all
+   * parties that need to get feeAmounts paid.
+   * @param _uints Array of all uints that go as following: 0 = Id of NFToken, 1 = _seed Timestamp
+   * that represents the salt, 2 = Timestamp of when the transfer claim expires,3 and more = Fee
+   * amounts of all the _feeAddresses (length of both have to be the same).
    */
-  function cancelTransfer(address _from,
-                          address _to,
-                          address _nfToken,
-                          uint256 _nfTokenId,
-                          address[] _feeAddresses,
-                          uint256[] _feeAmounts,
-                          uint256 _timestamp)
+  function cancelTransfer(address[] _addresses,
+                          uint256[] _uints)
     public
   {
-    require(msg.sender == _from);
+    require(msg.sender == _addresses[0]);
 
     bytes32 claim = getTransferDataClaim(
-      _from,
-      _to,
-      _nfToken,
-      _nfTokenId,
-      _feeAddresses,
-      _feeAmounts,
-      _timestamp
+      _addresses,
+      _uints
     );
 
     require(!transferPerformed[claim]);
@@ -259,48 +268,44 @@ contract Trader {
     transferCancelled[claim] = true;
 
     LogCancelTransfer(
-      _from,
-      _to,
-      _nfToken,
-      _nfTokenId,
-      _feeAddresses,
-      _feeAmounts,
-      _timestamp,
+      _addresses[0],
+      _addresses[1],
+      _addresses[2],
+      _uints[0],
+      _getAddressSubArray(_addresses, 3),
+      _getUintSubArray(_uints, 3),
+      _uints[1],
+      _uints[2],
       claim
     );
   }
 
   /*
    * @dev Calculates keccak-256 hlaim of mint data from parameters.
-   * @param _from Address of NFToken sender.
-   * @param _to Address of NFToken reciever.
-   * @param _nfToken Address of NFToken contract.
-   * @param _nfTokenId Id of NFToken (hashed certificate data that is transformed into uint256).
-   * @param _feeAddresses Addresses of all parties that need to get feeAmounts paid.
-   * @param _feeAmounts Fee amounts of all the _feeAddresses (length of both have to be the same).
-   * @param _timestamp Timestamp that represents the salt.
+   * @param _addresses Array of all addresses that go as following: 0 = Address of NFToken sender,
+   * 1 = Address of NFToken reciever, 2 = Address of NFToken contract, 3 and more = Addresses of all
+   * parties that need to get feeAmounts paid.
+   * @param _uints Array of all uints that go as following: 0 = Id of NFToken, 1 = _seed Timestamp
+   * that represents the salt, 2 = Timestamp of when the transfer claim expires,3 and more = Fee
+   * amounts of all the _feeAddresses (length of both have to be the same).
    * @returns keccak-hash of transfer data.
    */
-  function getTransferDataClaim(address _from,
-                               address _to,
-                               address _nfToken,
-                               uint256 _nfTokenId,
-                               address[] _feeAddresses,
-                               uint256[] _feeAmounts,
-                               uint256 _timestamp)
+  function getTransferDataClaim(address[] _addresses,
+                                uint256[] _uints)
     public
     constant
     returns (bytes32)
   {
     return keccak256(
       address(this),
-      _from,
-      _to,
-      _nfToken,
-      _nfTokenId,
-      _feeAddresses,
-      _feeAmounts,
-      _timestamp
+      _addresses[0],
+      _addresses[1],
+      _addresses[2],
+      _uints[0],
+      _getAddressSubArray(_addresses, 3),
+      _getUintSubArray(_uints, 3),
+      _uints[1],
+      _uints[2]
     );
   }
 
@@ -389,14 +394,11 @@ contract Trader {
    * @param _id Id of transfering NFToken.
    * @return Success of NFToken transfer.
    */
-  function _transferViaNFTokenTransferProxy(address _nfToken,
-                                            address _from,
-                                            address _to,
-                                            uint256 _id)
+  function _transferViaNFTokenTransferProxy(TransferData _transferData)
     internal
   {
      NFTokenTransferProxy(NFTOKEN_TRANSFER_PROXY_CONTRACT)
-      .transferFrom(_nfToken, _from, _to, _id);
+      .transferFrom(_transferData.nfToken, _transferData.from, _transferData.to, _transferData.id);
   }
 
   /*
@@ -461,6 +463,51 @@ contract Trader {
     }
 
     return false;
+  }
+
+  /*
+   * @dev Creates a sub array from address array.
+   * @param _array Array from which we will make a sub array.
+   * @param _index Index from which our sub array will be made.
+   */
+  function _getAddressSubArray(address[] _array, uint256 _index)
+    internal
+    pure
+    returns (address[])
+  {
+    require(_array.length > _index);
+    address[] memory subArray = new address[](_array.length.sub(_index));
+    uint256 j = 0;
+    for(uint256 i = _index; i < _array.length; i++)
+    {
+      subArray[j] = _array[i];
+      j++;
+    }
+
+    return subArray;
+  }
+
+  /*
+   * @dev Creates a sub array from uint256 array.
+   * @param _array Array from which we will make a sub array.
+   * @param _index Index from which our sub array will be made.
+   */
+  function _getUintSubArray(uint256[] _array,
+                            uint256 _index)
+    internal
+    pure
+    returns (uint256[])
+  {
+    require(_array.length > _index);
+    uint256[] memory subArray = new uint256[](_array.length.sub(_index));
+    uint256 j = 0;
+    for(uint256 i = _index; i < _array.length; i++)
+    {
+      subArray[j] = _array[i];
+      j++;
+    }
+
+    return subArray;
   }
 
   /**
