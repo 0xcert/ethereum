@@ -30,7 +30,7 @@ contract('Xcert', (accounts) => {
     await assertRevert(xcert.mint(accounts[0], '', mockProof, ''));
   });
 
-  it.only('throws trying to mint NFToken with empty proof', async () => {
+  it('throws trying to mint NFToken with empty proof', async () => {
     await assertRevert(xcert.mint(accounts[0], id3, '', ''));
   });
 
@@ -284,7 +284,7 @@ contract('Xcert', (accounts) => {
     assert.equal(symbol, 'F');
   });
 
-  it.only('returns the correct proof for NFToken id', async () => {
+  it('returns the correct proof for NFToken id', async () => {
     await xcert.mint(accounts[1], id2, mockProof, 'url2');
     var proof = await xcert.getProof(id2);
     assert.equal(proof, mockProof);
