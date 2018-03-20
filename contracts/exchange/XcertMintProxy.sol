@@ -70,13 +70,14 @@ contract XcertMintProxy is Ownable {
 
   function mint(address _xcert,
                 uint256 _id,
+                string _proof,
                 string _uri,
                 address _to)
     external
     onlyAuthorized
     returns (bool)
   {
-    return Xcert(_xcert).mint(_to, _id, _uri);
+    return Xcert(_xcert).mint(_to, _id, _proof, _uri);
   }
 
   /*
