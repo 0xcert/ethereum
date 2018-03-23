@@ -215,6 +215,33 @@ contract('Trader', (accounts) => {
 
           });
 
+          it.only('should transfer successfuly without any fees', async () => {
+
+            claimAddressArray = [from, to, xcert.address];
+            claimUintArray = [id1, timestamp, expirationTimestamp];
+
+            addressArray = [];
+            amountArray = [];
+            var hash = web3Util.soliditySha3(trader.address, from, to, xcert.address, id1, {t: 'address[]', v:addressArray}, {t: 'uint256[]', v:amountArray}, timestamp, expirationTimestamp);
+            var signature = web3.eth.sign(from, hash);
+
+            r = signature.substr(0, 66);
+            s = '0x' + signature.substr(66, 64);
+            v = parseInt('0x' + signature.substr(130, 2)) + 27;
+
+            await xcert.approve(nfTokenProxy.address, id1, {from: from});
+
+            let { logs } = await trader.performTransfer(claimAddressArray, claimUintArray, v, r, s, true, {from: to});
+
+            let event = logs.find(e => e.event === 'LogPerformTransfer');
+            assert.notEqual(event, undefined);
+
+            var owner = await xcert.ownerOf(id1);
+
+            assert.equal(owner, to);
+
+          });
+
           it('should fail with unsofficient allowence', async () => {
 
             await token.approve(tokenProxy.address, 10, {from: to});

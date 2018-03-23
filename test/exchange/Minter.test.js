@@ -209,6 +209,30 @@ contract('Minter', (accounts) => {
             assert.equal(tokenAmountAcc2, 180);
           });
 
+          it('mints correctly when no fees', async () => {
+            mintAddressArray = [to, xcert.address];
+            mintUintArray = [id1, timestamp, expirationTimestamp];
+            addressArray = [];
+            amountArray = [];
+            var hash = web3Util.soliditySha3(minter.address, to, xcert.address, id1, mockProof, uri, {t: 'address[]', v:addressArray}, {t: 'uint256[]', v:amountArray}, timestamp, expirationTimestamp);
+            var signature = web3.eth.sign(owner, hash);
+
+            r = signature.substr(0, 66);
+            s = '0x' + signature.substr(66, 64);
+            v = parseInt('0x' + signature.substr(130, 2)) + 27;
+
+            await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
+
+            let { logs } = await minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to});
+
+            let event = logs.find(e => e.event === 'LogPerformMint');
+            assert.notEqual(event, undefined);
+
+            var tokenOwner = await xcert.ownerOf(id1);
+            assert.equal(tokenOwner, to);
+          });
+
+
           it('throws if msg.sender is not the receiver', async () => {
             await token.approve(tokenProxy.address, 20, {from: to});
             await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});

@@ -488,7 +488,7 @@ contract Minter{
     pure
     returns (address[])
   {
-    require(_array.length > _index);
+    require(_array.length >= _index);
     address[] memory subArray = new address[](_array.length.sub(_index));
     uint256 j = 0;
     for(uint256 i = _index; i < _array.length; i++)
@@ -511,7 +511,7 @@ contract Minter{
     pure
     returns (uint256[])
   {
-    require(_array.length > _index);
+    require(_array.length >= _index);
     uint256[] memory subArray = new uint256[](_array.length.sub(_index));
     uint256 j = 0;
     for(uint256 i = _index; i < _array.length; i++)
