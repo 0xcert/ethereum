@@ -215,7 +215,7 @@ contract('Trader', (accounts) => {
 
           });
 
-          it.only('should transfer successfuly without any fees', async () => {
+          it('should transfer successfuly without any fees', async () => {
 
             claimAddressArray = [from, to, xcert.address];
             claimUintArray = [id1, timestamp, expirationTimestamp];
