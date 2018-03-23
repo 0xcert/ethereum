@@ -50,28 +50,24 @@ contract Minter{
    * @dev This event emmits when xcert gets mint directly to the taker.
    */
   event LogPerformMint(address _to,
-                       address _xcert,
+                       address indexed _xcert,
                        uint256 _id,
                        string _proof,
                        string _uri,
                        address[] _feeAddresses,
                        uint256[] _feeAmounts,
-                       uint256 _seed,
-                       uint256 _expirationTimestamp,
                        bytes32 _xcertMintClaim);
 
   /*
    * @dev This event emmits when xcert mint order is canceled.
    */
   event LogCancelMint(address _to,
-                      address _xcert,
+                      address indexed _xcert,
                       uint256 _id,
                       string _proof,
                       string _uri,
                       address[] _feeAddresses,
                       uint256[] _feeAmounts,
-                      uint256 _seed,
-                      uint256 _expirationTimestamp,
                       bytes32 _xcertMintClaim);
 
   /*
@@ -251,8 +247,6 @@ contract Minter{
       mintData.uri,
       mintData.feeAddresses,
       mintData.feeAmounts,
-      mintData.seed,
-      mintData.expirationTimestamp,
       mintData.claim
     );
 
@@ -297,8 +291,6 @@ contract Minter{
       _uri,
       _getAddressSubArray(_addresses, 2),
       _getUintSubArray(_uints, 3),
-      _uints[1],
-      _uints[2],
       claim
     );
   }

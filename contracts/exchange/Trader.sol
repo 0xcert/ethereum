@@ -49,27 +49,23 @@ contract Trader {
   /*
    * @dev This event emmits when NFToken changes ownership.
    */
-  event LogPerformTransfer(address _from,
+  event LogPerformTransfer(address indexed _from,
                            address _to,
                            address _nfToken,
                            uint256 _nfTokenId,
                            address[] _feeAddresses,
                            uint256[] _feeAmounts,
-                           uint256 _seed,
-                           uint256 _expirationTimestamp,
                            bytes32 _nfTokenTransferClaim);
 
   /*
    * @dev This event emmits when NFToken transfer order is canceled.
    */
-  event LogCancelTransfer(address _from,
+  event LogCancelTransfer(address indexed _from,
                           address _to,
                           address _nfToken,
                           uint256 _nfTokenId,
                           address[] _feeAddresses,
                           uint256[] _feeAmounts,
-                          uint256 _seed,
-                          uint256 _expirationTimestamp,
                           bytes32 _nfTokenTransferClaim);
 
   /*
@@ -235,8 +231,6 @@ contract Trader {
       transferData.id,
       transferData.feeAddresses,
       transferData.feeAmounts,
-      transferData.seed,
-      transferData.expirationTimestamp,
       transferData.claim
     );
 
@@ -274,8 +268,6 @@ contract Trader {
       _uints[0],
       _getAddressSubArray(_addresses, 3),
       _getUintSubArray(_uints, 3),
-      _uints[1],
-      _uints[2],
       claim
     );
   }
