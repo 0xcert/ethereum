@@ -180,6 +180,7 @@ contract Trader {
 
     require(transferData.to == msg.sender);
     require(transferData.from != transferData.to);
+    require(transferData.expirationTimestamp >= now);
 
     require(isValidSignature(
       transferData.from,
@@ -188,8 +189,6 @@ contract Trader {
       _r,
       _s
     ));
-
-    require(transferData.expirationTimestamp >= now);
 
     if(transferPerformed[transferData.claim])
     {

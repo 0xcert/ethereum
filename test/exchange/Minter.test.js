@@ -132,20 +132,21 @@ contract('Minter', (accounts) => {
 
   describe('mint', function () {
 
-    describe('valid signature', function () {
-      var r;
-      var s;
-      var v;
-      var timestamp = 1521195657;
-      var expirationTimestamp = 1821195657;
-      var addressArray = [accounts[1]];
-      var amountArray = [20];
-      var owner = accounts[0];
-      var to = accounts[2];
-      var thirdParty = accounts[3];
+    var r;
+    var s;
+    var v;
+    var timestamp = 1521195657;
+    var expirationTimestamp = 1821195657;
+    var addressArray = [accounts[1]];
+    var amountArray = [20];
+    var owner = accounts[0];
+    var to = accounts[2];
+    var thirdParty = accounts[3];
 
-      var mintAddressArray;
-      var mintUintArray;
+    var mintAddressArray;
+    var mintUintArray;
+
+    describe('same signature tests', function () {
 
       beforeEach(async () => {
         mintAddressArray = [to, xcert.address, accounts[1]];
@@ -209,56 +210,11 @@ contract('Minter', (accounts) => {
             assert.equal(tokenAmountAcc2, 180);
           });
 
-          it('mints correctly when no fees', async () => {
-            mintAddressArray = [to, xcert.address];
-            mintUintArray = [id1, timestamp, expirationTimestamp];
-            addressArray = [];
-            amountArray = [];
-            var hash = web3Util.soliditySha3(minter.address, to, xcert.address, id1, mockProof, uri, {t: 'address[]', v:addressArray}, {t: 'uint256[]', v:amountArray}, timestamp, expirationTimestamp);
-            var signature = web3.eth.sign(owner, hash);
-
-            r = signature.substr(0, 66);
-            s = '0x' + signature.substr(66, 64);
-            v = parseInt('0x' + signature.substr(130, 2)) + 27;
-
-            await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
-
-            let { logs } = await minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to});
-
-            let event = logs.find(e => e.event === 'LogPerformMint');
-            assert.notEqual(event, undefined);
-
-            var tokenOwner = await xcert.ownerOf(id1);
-            assert.equal(tokenOwner, to);
-          });
-
-
           it('throws if msg.sender is not the receiver', async () => {
             await token.approve(tokenProxy.address, 20, {from: to});
             await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
 
             await assertRevert(minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: thirdParty}));
-          });
-
-          it('throws when fee amount array is no the same length then feeRecipient', async () => {
-            await token.approve(tokenProxy.address, 20, {from: to});
-            await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
-            mintUintArray[4] = 10;
-            await assertRevert(minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to}));
-          });
-
-          it('throws when _from and the owner addresses are the same', async () => {
-            await token.approve(tokenProxy.address, 20, {from: to});
-            await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
-            mintAddressArray[0] = owner;
-            await assertRevert(minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to}));
-          });
-
-          it('throws if current time is after expirationTimestamp', async () => {
-            await token.approve(tokenProxy.address, 20, {from: to});
-            await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
-            mintUintArray[2] = timestamp;
-            await assertRevert(minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to}));
           });
 
           it('fails when trying to perform already performed mint', async () => {
@@ -319,6 +275,87 @@ contract('Minter', (accounts) => {
       });
 
     });
+
+   describe('different signature tests', function () {
+
+     it('mints correctly when no fees', async () => {
+        mintAddressArray = [to, xcert.address];
+        mintUintArray = [id1, timestamp, expirationTimestamp];
+        addressArray = [];
+        amountArray = [];
+        var hash = web3Util.soliditySha3(minter.address, to, xcert.address, id1, mockProof, uri, {t: 'address[]', v:addressArray}, {t: 'uint256[]', v:amountArray}, timestamp, expirationTimestamp);
+        var signature = web3.eth.sign(owner, hash);
+
+        r = signature.substr(0, 66);
+        s = '0x' + signature.substr(66, 64);
+        v = parseInt('0x' + signature.substr(130, 2)) + 27;
+
+        await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
+
+        let { logs } = await minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to});
+
+        let event = logs.find(e => e.event === 'LogPerformMint');
+        assert.notEqual(event, undefined);
+
+        var tokenOwner = await xcert.ownerOf(id1);
+        assert.equal(tokenOwner, to);
+      });
+
+      it('throws when fee amount array is no the same length then feeRecipient', async () => {
+
+        mintAddressArray = [to, xcert.address];
+        mintUintArray = [id1, timestamp, expirationTimestamp, 20, 10];
+        amountArray = [20, 10];
+        var hash = web3Util.soliditySha3(minter.address, to, xcert.address, id1, mockProof, uri, {t: 'address[]', v:addressArray}, {t: 'uint256[]', v:amountArray}, timestamp, expirationTimestamp);
+        var signature = web3.eth.sign(owner, hash);
+
+        r = signature.substr(0, 66);
+        s = '0x' + signature.substr(66, 64);
+        v = parseInt('0x' + signature.substr(130, 2)) + 27;
+
+        await token.approve(tokenProxy.address, 20, {from: to});
+        await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
+
+        await assertRevert(minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to}));
+      });
+
+      it('throws when to and the owner addresses are the same', async () => {
+
+        mintAddressArray = [owner, xcert.address];
+        mintUintArray = [id1, timestamp, expirationTimestamp, 20];
+        amountArray = [20];
+
+        var hash = web3Util.soliditySha3(minter.address, owner, xcert.address, id1, mockProof, uri, {t: 'address[]', v:addressArray}, {t: 'uint256[]', v:amountArray}, timestamp, expirationTimestamp);
+        var signature = web3.eth.sign(owner, hash);
+
+        r = signature.substr(0, 66);
+        s = '0x' + signature.substr(66, 64);
+        v = parseInt('0x' + signature.substr(130, 2)) + 27;
+
+        await token.approve(tokenProxy.address, 20, {from: owner});
+        await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
+        await assertRevert(minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: owner}));
+      });
+
+      it('throws if current time is after expirationTimestamp', async () => {
+        mintAddressArray = [to, xcert.address];
+        mintUintArray = [id1, timestamp, timestamp, 20];
+        amountArray = [20];
+
+        var hash = web3Util.soliditySha3(minter.address, to, xcert.address, id1, mockProof, uri, {t: 'address[]', v:addressArray}, {t: 'uint256[]', v:amountArray}, timestamp, timestamp);
+        var signature = web3.eth.sign(owner, hash);
+
+        r = signature.substr(0, 66);
+        s = '0x' + signature.substr(66, 64);
+        v = parseInt('0x' + signature.substr(130, 2)) + 27;
+
+        await token.approve(tokenProxy.address, 20, {from: to});
+        await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
+        await assertRevert(minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to}));
+      });
+
+
+   });
 
   });
 
