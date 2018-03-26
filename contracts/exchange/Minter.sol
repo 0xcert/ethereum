@@ -195,6 +195,7 @@ contract Minter{
 
     require(mintData.to == msg.sender);
     require(mintData.owner != mintData.to);
+    require(mintData.expirationTimestamp >= now);
 
     require(isValidSignature(
       mintData.owner,
@@ -203,8 +204,6 @@ contract Minter{
       _r,
       _s
     ));
-
-    require(mintData.expirationTimestamp >= now);
 
     if(mintPerformed[mintData.claim])
     {
