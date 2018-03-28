@@ -335,7 +335,6 @@ contract Trader {
   function _canPayFee(address _to,
                       uint256[] _feeAmounts)
     internal
-    constant
     returns (bool)
   {
     uint256 feeAmountsum = 0;
@@ -403,7 +402,6 @@ contract Trader {
   function _getBalance(address _token,
                        address _owner)
     internal
-    constant
     returns (uint)
   {
     return ERC20(_token).balanceOf.gas(EXTERNAL_QUERY_GAS_LIMIT)(_owner);
@@ -420,7 +418,6 @@ contract Trader {
   function _getAllowance(address _token,
                          address _owner)
     internal
-    constant
     returns (uint)
   {
     return ERC20(_token).allowance.gas(EXTERNAL_QUERY_GAS_LIMIT)(
