@@ -50,28 +50,24 @@ contract Minter{
    * @dev This event emmits when xcert gets mint directly to the taker.
    */
   event LogPerformMint(address _to,
-                       address _xcert,
+                       address indexed _xcert,
                        uint256 _id,
                        string _proof,
                        string _uri,
                        address[] _feeAddresses,
                        uint256[] _feeAmounts,
-                       uint256 _seed,
-                       uint256 _expirationTimestamp,
                        bytes32 _xcertMintClaim);
 
   /*
    * @dev This event emmits when xcert mint order is canceled.
    */
   event LogCancelMint(address _to,
-                      address _xcert,
+                      address indexed _xcert,
                       uint256 _id,
                       string _proof,
                       string _uri,
                       address[] _feeAddresses,
                       uint256[] _feeAmounts,
-                      uint256 _seed,
-                      uint256 _expirationTimestamp,
                       bytes32 _xcertMintClaim);
 
   /*
@@ -199,6 +195,7 @@ contract Minter{
 
     require(mintData.to == msg.sender);
     require(mintData.owner != mintData.to);
+    require(mintData.expirationTimestamp >= now);
 
     require(isValidSignature(
       mintData.owner,
@@ -207,8 +204,6 @@ contract Minter{
       _r,
       _s
     ));
-
-    require(mintData.expirationTimestamp >= now);
 
     if(mintPerformed[mintData.claim])
     {
@@ -251,8 +246,6 @@ contract Minter{
       mintData.uri,
       mintData.feeAddresses,
       mintData.feeAmounts,
-      mintData.seed,
-      mintData.expirationTimestamp,
       mintData.claim
     );
 
@@ -297,8 +290,6 @@ contract Minter{
       _uri,
       _getAddressSubArray(_addresses, 2),
       _getUintSubArray(_uints, 3),
-      _uints[1],
-      _uints[2],
       claim
     );
   }
@@ -410,7 +401,6 @@ contract Minter{
   function _getBalance(address _token,
                        address _owner)
     internal
-    constant
     returns (uint)
   {
     return ERC20(_token).balanceOf.gas(EXTERNAL_QUERY_GAS_LIMIT)(_owner);
@@ -427,7 +417,6 @@ contract Minter{
   function _getAllowance(address _token,
                          address _owner)
     internal
-    constant
     returns (uint)
   {
     return ERC20(_token).allowance.gas(EXTERNAL_QUERY_GAS_LIMIT)(
@@ -445,7 +434,6 @@ contract Minter{
   function _canPayFee(address _to,
                       uint256[] _feeAmounts)
     internal
-    constant
     returns (bool)
   {
     uint256 feeAmountsum = 0;
@@ -496,7 +484,7 @@ contract Minter{
     pure
     returns (address[])
   {
-    require(_array.length > _index);
+    require(_array.length >= _index);
     address[] memory subArray = new address[](_array.length.sub(_index));
     uint256 j = 0;
     for(uint256 i = _index; i < _array.length; i++)
@@ -519,7 +507,7 @@ contract Minter{
     pure
     returns (uint256[])
   {
-    require(_array.length > _index);
+    require(_array.length >= _index);
     uint256[] memory subArray = new uint256[](_array.length.sub(_index));
     uint256 j = 0;
     for(uint256 i = _index; i < _array.length; i++)

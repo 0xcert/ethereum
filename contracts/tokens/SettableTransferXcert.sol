@@ -18,8 +18,7 @@ contract SettableTransferXcert is Xcert {
     Xcert(_name, _symbol)
     public
   {
-    //TODO(Tadej): add for settable transfer Xcert
-    //supportedInterfaces[0x5b5e139f] = true; // SettableTransferXcert
+    supportedInterfaces[0x9cd23707] = true; // SettableTransferXcert
     isTransferable = true;
   }
 

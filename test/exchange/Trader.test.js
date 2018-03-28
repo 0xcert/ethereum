@@ -136,21 +136,22 @@ contract('Trader', (accounts) => {
 
   describe('transfer', function () {
 
-    describe('valid signature', function () {
-      var r;
-      var s;
-      var v;
+    var r;
+    var s;
+    var v;
 
-      var timestamp = 1521195657;
-      var expirationTimestamp = 1821195657;
-      var addressArray = [accounts[1]];
-      var amountArray = [20];
-      var from = accounts[1];
-      var to = accounts[2];
-      var thirdParty = accounts[3];
+    var timestamp = 1521195657;
+    var expirationTimestamp = 1821195657;
+    var addressArray = [accounts[1]];
+    var amountArray = [20];
+    var from = accounts[1];
+    var to = accounts[2];
+    var thirdParty = accounts[3];
 
-      var claimAddressArray;
-      var claimUintArray;
+    var claimAddressArray;
+    var claimUintArray;
+
+    describe('same signature tests', function () {
 
       beforeEach(async () => {
         claimAddressArray = [from, to, xcert.address, from];
@@ -236,26 +237,10 @@ contract('Trader', (accounts) => {
             assert.notEqual(event, undefined);
           });
 
-          it('throws when fee amount array is no the same length then feeRecipient', async () => {
-            claimUintArray[5] = 30;
-            await assertRevert(trader.performTransfer(claimAddressArray, claimUintArray, v, r, s, true, {from: to}));
-          });
-
           it('throws when _to address is not the one performing transfer', async () => {
             await assertRevert(trader.performTransfer(claimAddressArray, claimUintArray, v, r, s, true, {from: thirdParty}));
           });
 
-          it('throws if current time is after expirationTimestamp', async () => {
-            await token.approve(tokenProxy.address, 20, {from: to});
-            await xcert.approve(nfTokenProxy.address, id1, {from: from});
-            claimUintArray[2] = timestamp;
-            await assertRevert(trader.performTransfer(claimAddressArray, claimUintArray, v, r, s, true, {from: to}));
-          });
-
-          it('throws when _to and _from addresses are the same', async () => {
-            claimAddressArray[0] = to;
-            await assertRevert(trader.performTransfer(claimAddressArray, claimUintArray, v, r, s, true, {from: to}));
-          });
 
           it('fails trying to perfom an already performed transfer', async () => {
 
@@ -304,5 +289,89 @@ contract('Trader', (accounts) => {
         });
       });
     });
+
+    describe('different signature tests', function () {
+
+     it('throws when fee amount array is no the same length then feeRecipient', async () => {
+        claimAddressArray = [from, to, xcert.address, from];
+        claimUintArray = [id1, timestamp, expirationTimestamp, 20, 30];
+        amountArray[1] = 30;
+        var hash = web3Util.soliditySha3(trader.address, from, to, xcert.address, id1, {t: 'address[]', v:addressArray}, {t: 'uint256[]', v:amountArray}, timestamp, expirationTimestamp);
+        var signature = web3.eth.sign(from, hash);
+
+        r = signature.substr(0, 66);
+        s = '0x' + signature.substr(66, 64);
+        v = parseInt('0x' + signature.substr(130, 2)) + 27;
+
+        await token.approve(tokenProxy.address, 20, {from: to});
+        await xcert.approve(nfTokenProxy.address, id1, {from: from});
+
+        await assertRevert(trader.performTransfer(claimAddressArray, claimUintArray, v, r, s, true, {from: to}));
+      });
+
+
+      it('throws if current time is after expirationTimestamp', async () => {
+
+        claimAddressArray = [from, to, xcert.address, from];
+        claimUintArray = [id1, timestamp, timestamp, 20];
+        var hash = web3Util.soliditySha3(trader.address, from, to, xcert.address, id1, {t: 'address[]', v:addressArray}, {t: 'uint256[]', v:amountArray}, timestamp, timestamp);
+        var signature = web3.eth.sign(from, hash);
+
+        r = signature.substr(0, 66);
+        s = '0x' + signature.substr(66, 64);
+        v = parseInt('0x' + signature.substr(130, 2)) + 27;
+
+        await token.approve(tokenProxy.address, 20, {from: to});
+        await xcert.approve(nfTokenProxy.address, id1, {from: from});
+
+        await assertRevert(trader.performTransfer(claimAddressArray, claimUintArray, v, r, s, true, {from: to}));
+      });
+
+      it('throws when _to and _from addresses are the same', async () => {
+
+        claimAddressArray = [to, to, xcert.address, from];
+        claimUintArray = [id1, timestamp, expirationTimestamp, 20];
+        var hash = web3Util.soliditySha3(trader.address, to, to, xcert.address, id1, {t: 'address[]', v:addressArray}, {t: 'uint256[]', v:amountArray}, timestamp, expirationTimestamp);
+        var signature = web3.eth.sign(from, hash);
+
+        r = signature.substr(0, 66);
+        s = '0x' + signature.substr(66, 64);
+        v = parseInt('0x' + signature.substr(130, 2)) + 27;
+
+        await token.approve(tokenProxy.address, 20, {from: to});
+        await xcert.approve(nfTokenProxy.address, id1, {from: from});
+
+        await assertRevert(trader.performTransfer(claimAddressArray, claimUintArray, v, r, s, true, {from: to}));
+      });
+
+      it('should transfer successfuly without any fees', async () => {
+
+        claimAddressArray = [from, to, xcert.address];
+        claimUintArray = [id1, timestamp, expirationTimestamp];
+
+        addressArray = [];
+        amountArray = [];
+        var hash = web3Util.soliditySha3(trader.address, from, to, xcert.address, id1, {t: 'address[]', v:addressArray}, {t: 'uint256[]', v:amountArray}, timestamp, expirationTimestamp);
+        var signature = web3.eth.sign(from, hash);
+
+        r = signature.substr(0, 66);
+        s = '0x' + signature.substr(66, 64);
+        v = parseInt('0x' + signature.substr(130, 2)) + 27;
+
+        await xcert.approve(nfTokenProxy.address, id1, {from: from});
+
+        let { logs } = await trader.performTransfer(claimAddressArray, claimUintArray, v, r, s, true, {from: to});
+
+        let event = logs.find(e => e.event === 'LogPerformTransfer');
+        assert.notEqual(event, undefined);
+
+        var owner = await xcert.ownerOf(id1);
+
+        assert.equal(owner, to);
+
+        });
+
+    });
+
   });
 });
