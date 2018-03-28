@@ -161,10 +161,9 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
     issuerName = _name;
     issuerSymbol = _symbol;
     supportedInterfaces[0x01ffc9a7] = true; // ERC165
-    supportedInterfaces[0x6466353c] = true; // ERC721
+    supportedInterfaces[0x80ac58cd] = true; // ERC721
     supportedInterfaces[0x5b5e139f] = true; // ERC721Metadata
-    //TODO(Tadej): add for Xcert
-    //supportedInterfaces[0x5b5e139f] = true; // ERC721Metadata
+    supportedInterfaces[0x58c66b9f] = true; // Xcert
     XcertContractDeployed(address(this), _name, _symbol);
   }
 
