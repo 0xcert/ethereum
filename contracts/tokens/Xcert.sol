@@ -16,14 +16,14 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
   using SafeMath for uint256;
 
   /*
-   * @dev NFToken issuer name.
+   * @dev A descriptive name for a collection of NFTs.
    */
-  string private issuerName;
+  string private xcertName;
 
   /*
-   * @dev NFToken issuer symbol.
+   * @dev An abbreviated name for NFTokens.
    */
-  string private issuerSymbol;
+  string private xcertSymbol;
 
   /*
    * @dev A mapping from NFToken ID to the address that owns it.
@@ -152,14 +152,14 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
 
   /*
    * @dev Contract constructor.
-   * @param _name Name of the NFToken issuer.
-   * @param _symbol Symbol of the NFToken issuer.
+   * @param _name A descriptive name for a collection of NFTs.
+   * @param _symbol An abbreviated name for NFTokens.
    */
   function Xcert(string _name, string _symbol)
     public
   {
-    issuerName = _name;
-    issuerSymbol = _symbol;
+    xcertName = _name;
+    xcertSymbol = _symbol;
     supportedInterfaces[0x01ffc9a7] = true; // ERC165
     supportedInterfaces[0x80ac58cd] = true; // ERC721
     supportedInterfaces[0x5b5e139f] = true; // ERC721Metadata
@@ -497,18 +497,18 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
     view
     returns (string _name)
   {
-    _name = issuerName;
+    _name = xcertName;
   }
 
   /*
-  * @notice Returns nn abbreviated name for NFTokens.
+  * @notice Returns an abbreviated name for NFTokens.
   */
   function symbol()
     external
     view
     returns (string _symbol)
   {
-    _symbol = issuerSymbol;
+    _symbol = xcertSymbol;
   }
 
   /*
