@@ -1,7 +1,7 @@
 pragma solidity ^0.4.19;
 
-import "../tokens/BurnableXcert.sol";
-import "../tokens/SettableTransferXcert.sol";
+import "../../contracts/tokens/BurnableXcert.sol";
+import "../../contracts/tokens/SettableTransferXcert.sol";
 
 contract XcertMock is BurnableXcert, SettableTransferXcert {
 

@@ -1,6 +1,6 @@
 pragma solidity ^0.4.19;
 
-import "../tokens/ERC721TokenReceiver.sol";
+import "../../contracts/tokens/ERC721TokenReceiver.sol";
 
 contract ERC721TokenReceiverMock is ERC721TokenReceiver {
 
