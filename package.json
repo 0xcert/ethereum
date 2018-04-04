@@ -13,12 +13,17 @@
     "flatten:xct": "truffle-flattener contracts/tokens/Xct.sol >> build/Xct.bundle.sol",
     "flatten:xcert": "truffle-flattener contracts/tokens/Xct.sol >> build/Xcert.bundle.sol",
     "flatten": "npm run flatten:xct && npm run flatten:xcert",
-    "test": "truffle test"
+    "test": "truffle test",
+    "setup:migrate": "truffle migrate --network dev",
+    "setup:ganache": "ganache-cli",
+    "setup:env": "npm-run-all -p setup:ganache setup:migrate"
   },
   "author": "https://0xcert.org",
   "license": "MIT",
   "devDependencies": {
     "ethjs-util": "0.1.4",
+    "ganache-cli": "^6.1.0",
+    "npm-run-all": "^4.1.2",
     "truffle": "^4.1.0",
     "truffle-flattener": "1.2.0",
     "web3-utils": "^1.0.0-beta.30"
