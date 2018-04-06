@@ -53,7 +53,7 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
   /*
    * @dev Mapping from NFToken ID to proof.
    */
-  mapping (uint256 => string) internal idToProof;
+  mapping (uint256 => string[]) internal idToProof;
 
   /*
    * @dev Mapping of supported intefraces.
@@ -102,11 +102,6 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
    * The _target can mint new NFTokens.
    */
   event MintAuthorizedAddress(address indexed _target, bool _authorized);
-
-  /*
-   * @dev this emits everytime a new Xcert contract is deployed.
-   */
-  event XcertContractDeployed(address _contractAddress, string _name, string _symbol);
 
   /*
    * @dev Guarantees that the msg.sender is an owner or operator of the given NFToken.
@@ -164,7 +159,6 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
     supportedInterfaces[0x80ac58cd] = true; // ERC721
     supportedInterfaces[0x5b5e139f] = true; // ERC721Metadata
     supportedInterfaces[0x58c66b9f] = true; // Xcert
-    XcertContractDeployed(address(this), _name, _symbol);
   }
 
   /*
@@ -391,7 +385,7 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
     require(bytes(_proof).length > 0);
 
     idToUri[_id] = _uri;
-    idToProof[_id] = _proof;
+    idToProof[_id].push(_proof);
     addNFToken(_to, _id);
 
     Transfer(address(0), _to, _id);
@@ -408,7 +402,7 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
     view
     returns (string)
   {
-    return idToProof[_tokenId];
+    return idToProof[_tokenId][idToProof[_tokenId].length.sub(1)];
   }
 
   /*
