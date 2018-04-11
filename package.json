@@ -1,8 +1,7 @@
 {
-  "name": "0xcert-ethereum",
+  "name": "@0xcert/ethereum",
   "version": "0.1.0",
   "description": "0xcert protocol implementation for Ethereum blockchain.",
-  "private": true,
   "main": "truffle.js",
   "directories": {
     "contracts": "contracts",
@@ -18,14 +17,39 @@
     "setup:ganache": "ganache-cli",
     "setup:env": "npm-run-all -p setup:ganache setup:migrate"
   },
-  "author": "https://0xcert.org",
+  "author": "0xcert",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0xcert/ethereum.git"
+  },
+  "bugs": {
+    "url": "https://github.com/0xcert/ethereum/issues"
+  },
+  "homepage": "https://github.com/0xcert/ethereum#readme",
+  "keywords": [
+    "0xcert",
+    "protocol",
+    "ethereum",
+    "eth",
+    "contracts",
+    "contract",
+    "smart",
+    "smart-contracts",
+    "smart-contract",
+    "tokens",
+    "token",
+    "xct",
+    "xcert",
+    "non-fungible",
+    "erc721"
+  ],
   "devDependencies": {
-    "ethjs-util": "0.1.4",
+    "ethjs-util": "^0.1.4",
     "ganache-cli": "^6.1.0",
     "npm-run-all": "^4.1.2",
     "truffle": "^4.1.0",
-    "truffle-flattener": "1.2.0",
+    "truffle-flattener": "^1.2.0",
     "web3-utils": "^1.0.0-beta.30"
   }
 }
