@@ -49,27 +49,23 @@ contract Trader {
   /*
    * @dev This event emmits when NFToken changes ownership.
    */
-  event LogPerformTransfer(address _from,
+  event LogPerformTransfer(address indexed _from,
                            address _to,
                            address _nfToken,
                            uint256 _nfTokenId,
                            address[] _feeAddresses,
                            uint256[] _feeAmounts,
-                           uint256 _seed,
-                           uint256 _expirationTimestamp,
                            bytes32 _nfTokenTransferClaim);
 
   /*
    * @dev This event emmits when NFToken transfer order is canceled.
    */
-  event LogCancelTransfer(address _from,
+  event LogCancelTransfer(address indexed _from,
                           address _to,
                           address _nfToken,
                           uint256 _nfTokenId,
                           address[] _feeAddresses,
                           uint256[] _feeAmounts,
-                          uint256 _seed,
-                          uint256 _expirationTimestamp,
                           bytes32 _nfTokenTransferClaim);
 
   /*
@@ -184,6 +180,7 @@ contract Trader {
 
     require(transferData.to == msg.sender);
     require(transferData.from != transferData.to);
+    require(transferData.expirationTimestamp >= now);
 
     require(isValidSignature(
       transferData.from,
@@ -192,8 +189,6 @@ contract Trader {
       _r,
       _s
     ));
-
-    require(transferData.expirationTimestamp >= now);
 
     if(transferPerformed[transferData.claim])
     {
@@ -235,8 +230,6 @@ contract Trader {
       transferData.id,
       transferData.feeAddresses,
       transferData.feeAmounts,
-      transferData.seed,
-      transferData.expirationTimestamp,
       transferData.claim
     );
 
@@ -274,8 +267,6 @@ contract Trader {
       _uints[0],
       _getAddressSubArray(_addresses, 3),
       _getUintSubArray(_uints, 3),
-      _uints[1],
-      _uints[2],
       claim
     );
   }
@@ -344,7 +335,6 @@ contract Trader {
   function _canPayFee(address _to,
                       uint256[] _feeAmounts)
     internal
-    constant
     returns (bool)
   {
     uint256 feeAmountsum = 0;
@@ -412,7 +402,6 @@ contract Trader {
   function _getBalance(address _token,
                        address _owner)
     internal
-    constant
     returns (uint)
   {
     return ERC20(_token).balanceOf.gas(EXTERNAL_QUERY_GAS_LIMIT)(_owner);
@@ -429,7 +418,6 @@ contract Trader {
   function _getAllowance(address _token,
                          address _owner)
     internal
-    constant
     returns (uint)
   {
     return ERC20(_token).allowance.gas(EXTERNAL_QUERY_GAS_LIMIT)(
@@ -475,7 +463,7 @@ contract Trader {
     pure
     returns (address[])
   {
-    require(_array.length > _index);
+    require(_array.length >= _index);
     address[] memory subArray = new address[](_array.length.sub(_index));
     uint256 j = 0;
     for(uint256 i = _index; i < _array.length; i++)
@@ -498,7 +486,7 @@ contract Trader {
     pure
     returns (uint256[])
   {
-    require(_array.length > _index);
+    require(_array.length >= _index);
     uint256[] memory subArray = new uint256[](_array.length.sub(_index));
     uint256 j = 0;
     for(uint256 i = _index; i < _array.length; i++)

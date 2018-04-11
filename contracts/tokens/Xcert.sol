@@ -16,14 +16,14 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
   using SafeMath for uint256;
 
   /*
-   * @dev NFToken issuer name.
+   * @dev A descriptive name for a collection of NFTs.
    */
-  string private issuerName;
+  string private xcertName;
 
   /*
-   * @dev NFToken issuer symbol.
+   * @dev An abbreviated name for NFTokens.
    */
-  string private issuerSymbol;
+  string private xcertSymbol;
 
   /*
    * @dev A mapping from NFToken ID to the address that owns it.
@@ -53,7 +53,7 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
   /*
    * @dev Mapping from NFToken ID to proof.
    */
-  mapping (uint256 => string) internal idToProof;
+  mapping (uint256 => string[]) internal idToProof;
 
   /*
    * @dev Mapping of supported intefraces.
@@ -104,11 +104,6 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
   event MintAuthorizedAddress(address indexed _target, bool _authorized);
 
   /*
-   * @dev this emits everytime a new Xcert contract is deployed.
-   */
-  event XcertContractDeployed(address _contractAddress, string _name, string _symbol);
-
-  /*
    * @dev Guarantees that the msg.sender is an owner or operator of the given NFToken.
    * @param _tokenId ID of the NFToken to validate.
    */
@@ -152,20 +147,18 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
 
   /*
    * @dev Contract constructor.
-   * @param _name Name of the NFToken issuer.
-   * @param _symbol Symbol of the NFToken issuer.
+   * @param _name A descriptive name for a collection of NFTs.
+   * @param _symbol An abbreviated name for NFTokens.
    */
   function Xcert(string _name, string _symbol)
     public
   {
-    issuerName = _name;
-    issuerSymbol = _symbol;
+    xcertName = _name;
+    xcertSymbol = _symbol;
     supportedInterfaces[0x01ffc9a7] = true; // ERC165
-    supportedInterfaces[0x6466353c] = true; // ERC721
+    supportedInterfaces[0x80ac58cd] = true; // ERC721
     supportedInterfaces[0x5b5e139f] = true; // ERC721Metadata
-    //TODO(Tadej): add for Xcert
-    //supportedInterfaces[0x5b5e139f] = true; // ERC721Metadata
-    XcertContractDeployed(address(this), _name, _symbol);
+    supportedInterfaces[0x58c66b9f] = true; // Xcert
   }
 
   /*
@@ -392,7 +385,7 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
     require(bytes(_proof).length > 0);
 
     idToUri[_id] = _uri;
-    idToProof[_id] = _proof;
+    idToProof[_id].push(_proof);
     addNFToken(_to, _id);
 
     Transfer(address(0), _to, _id);
@@ -409,7 +402,7 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
     view
     returns (string)
   {
-    return idToProof[_tokenId];
+    return idToProof[_tokenId][idToProof[_tokenId].length.sub(1)];
   }
 
   /*
@@ -498,18 +491,18 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
     view
     returns (string _name)
   {
-    _name = issuerName;
+    _name = xcertName;
   }
 
   /*
-  * @notice Returns nn abbreviated name for NFTokens.
+  * @notice Returns an abbreviated name for NFTokens.
   */
   function symbol()
     external
     view
     returns (string _symbol)
   {
-    _symbol = issuerSymbol;
+    _symbol = xcertSymbol;
   }
 
   /*

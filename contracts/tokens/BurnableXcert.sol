@@ -8,8 +8,7 @@ contract BurnableXcert is Xcert {
     Xcert(_name, _symbol)
     public
   {
-    //TODO(Tadej): add for burnable Xcert
-    //supportedInterfaces[0x5b5e139f] = true; // BurnableXcert
+    supportedInterfaces[0x42966c68] = true; // BurnableXcert
   }
 
   /*
