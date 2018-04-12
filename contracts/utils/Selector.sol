@@ -2,7 +2,7 @@ pragma solidity ^0.4.19;
 
 import "../tokens/Xcert.sol";
 import "../tokens/BurnableXcert.sol";
-import "../tokens/SettableTransferXcert.sol";
+import "../tokens/PausableXcert.sol";
 import "../tokens/ChainableXcert.sol";
 import "../protocol/Minter.sol";
 import "../protocol/Trader.sol";
@@ -23,9 +23,9 @@ contract Selector {
       return i.burn.selector;
     }
 
-    function calculateSettableTransferXcertSelector() public pure returns (bytes4) {
-      SettableTransferXcert i;
-      return i.setTransferable.selector;
+    function calculatePausableXcertSelector() public pure returns (bytes4) {
+      PausableXcert i;
+      return i.setPause.selector;
     }
 
     function calculateChainableXcertSelector() public pure returns (bytes4) {
