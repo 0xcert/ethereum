@@ -1,7 +1,10 @@
 const Xcert = artifacts.require('Xcert');
 const BurnableXcert = artifacts.require('BurnableXcert');
 const ChainableXcert = artifacts.require('ChainableXcert');
-const SettableTransferXcert = artifacts.require('SettableTransferXcert');
+const PausableXcert = artifacts.require('PausableXcert');
+const Minter = artifacts.require('Minter');
+const Trader = artifacts.require('Trader');
+const Swapper = artifacts.require('Swapper');
 const Selector = artifacts.require('Selector');
 
 contract('Selector', (accounts) => {
@@ -26,9 +29,9 @@ contract('Selector', (accounts) => {
     assert.equal(supports, true);
   });
 
-  it('Checks SettableTransferXcert selector', async () => {
-    var xcert = await SettableTransferXcert.new('Foo', 'F');
-    var bytes = await selector.calculateSettableTransferXcertSelector();
+  it('Checks PausableXcert selector', async () => {
+    var xcert = await PausableXcert.new('Foo', 'F');
+    var bytes = await selector.calculatePausableXcertSelector();
     var supports = await xcert.supportsInterface(bytes);
     assert.equal(supports, true);
   });
@@ -37,6 +40,27 @@ contract('Selector', (accounts) => {
     var xcert = await ChainableXcert.new('Foo', 'F');
     var bytes = await selector.calculateChainableXcertSelector();
     var supports = await xcert.supportsInterface(bytes);
+    assert.equal(supports, true);
+  });
+
+  it('Checks Minter selector', async () => {
+    var minter = await Minter.new(accounts[1], accounts[2], accounts[3]);
+    var bytes = await selector.calculateMinterSelector();
+    var supports = await minter.supportsInterface(bytes);
+    assert.equal(supports, true);
+  });
+
+  it('Checks Trader selector', async () => {
+    var trader = await Trader.new(accounts[1], accounts[2], accounts[3]);
+    var bytes = await selector.calculateTraderSelector();
+    var supports = await trader.supportsInterface(bytes);
+    assert.equal(supports, true);
+  });
+
+  it('Checks Swapper selector', async () => {
+    var swapper = await Swapper.new(accounts[1], accounts[2], accounts[3]);
+    var bytes = await selector.calculateSwapperSelector();
+    var supports = await swapper.supportsInterface(bytes);
     assert.equal(supports, true);
   });
 

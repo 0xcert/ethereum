@@ -23,7 +23,7 @@ contract('XcertMock', (accounts) => {
   });
 
   it('reverts trying to transfer when transfers are disabled', async () => {
-    await xcert.setTransferable(false);
+    await xcert.setPause(true);
     await assertRevert(xcert.transferFrom(accounts[0], accounts[1], id1));
   });
 
