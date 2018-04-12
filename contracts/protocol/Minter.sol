@@ -6,11 +6,12 @@ import "../tokens/Xcert.sol";
 import "../tokens/ERC20.sol";
 import "./TokenTransferProxy.sol";
 import "./XcertMintProxy.sol";
+import "../tokens/ERC165.sol";
 
 /*
  * @dev based on: https://github.com/0xProject/contracts/blob/master/contracts/Exchange.sol
  */
-contract Minter{
+contract Minter is ERC165 {
 
   using SafeMath for uint256;
 
@@ -45,6 +46,12 @@ contract Minter{
    * @dev Mapping of all performed mints.
    */
   mapping(bytes32 => bool) public mintPerformed;
+
+  /*
+   * @dev Mapping of supported intefraces.
+   * You must not set element 0xffffffff to true.
+   */
+  mapping(bytes4 => bool) internal supportedInterfaces;
 
   /*
    * @dev This event emmits when xcert gets mint directly to the taker.
@@ -107,6 +114,8 @@ contract Minter{
     XCT_TOKEN_CONTRACT = _xctToken;
     TOKEN_TRANSFER_PROXY_CONTRACT = _tokenTransferProxy;
     XCERT_MINT_PROXY_CONTRACT = _xcertMintProxy;
+    supportedInterfaces[0x01ffc9a7] = true; // ERC165
+    supportedInterfaces[0xca4a3079] = true; // Minter
   }
 
 
@@ -352,6 +361,18 @@ contract Minter{
       _r,
       _s
     );
+  }
+
+  /*
+   * @dev Function to check which interfaces are suported by this contract.
+   * @param interfaceID If of the interface.
+   */
+  function supportsInterface(bytes4 interfaceID)
+    external
+    view
+    returns (bool)
+  {
+    return supportedInterfaces[interfaceID];
   }
 
   /*
