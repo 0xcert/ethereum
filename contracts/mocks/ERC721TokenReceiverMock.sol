@@ -2,6 +2,7 @@ pragma solidity ^0.4.19;
 
 import "../../contracts/tokens/ERC721TokenReceiver.sol";
 
+
 contract ERC721TokenReceiverMock is ERC721TokenReceiver {
 
   /*
@@ -30,6 +31,9 @@ contract ERC721TokenReceiverMock is ERC721TokenReceiver {
     external
     returns(bytes4)
   {
+    _from;
+    _tokenId;
+    data;
     return MAGIC_ONERC721RECEIVED;
   }
 }
