@@ -1,5 +1,5 @@
 
-pragma solidity 0.4.19;
+pragma solidity 0.4.21;
 
 /*
  * @dev based od: https://github.com/0xProject/contracts/blob/master/contracts/TokenTransferProxy.sol
@@ -47,7 +47,7 @@ contract XcertMintProxy is Ownable {
   {
     authorized[target] = true;
     authorities.push(target);
-    LogAuthorizedAddressAdded(target, msg.sender);
+    emit LogAuthorizedAddressAdded(target, msg.sender);
   }
 
   /// @dev Removes authorizion of an address.
@@ -65,7 +65,7 @@ contract XcertMintProxy is Ownable {
             break;
         }
     }
-    LogAuthorizedAddressRemoved(target, msg.sender);
+    emit LogAuthorizedAddressRemoved(target, msg.sender);
   }
 
   function mint(address _xcert,

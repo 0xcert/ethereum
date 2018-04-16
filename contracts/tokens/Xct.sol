@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.21;
 
 import "../math/SafeMath.sol";
 import "../ownership/Ownable.sol";
@@ -6,7 +6,7 @@ import "../ownership/Ownable.sol";
 /*
  * @title XCT protocol token.
  * @dev Standard ERC20 token used by the protocol. This contract follows the
- * implementation at https://goo.gl/64yCkF. 
+ * implementation at https://goo.gl/64yCkF.
  */
 contract Xct is Ownable {
   using SafeMath for uint256;
@@ -101,7 +101,7 @@ contract Xct is Ownable {
     transferEnabled = false;
 
     balances[owner] = currentSupply;
-    Transfer(address(0x0), owner, currentSupply);
+    emit Transfer(address(0x0), owner, currentSupply);
   }
 
   /**
@@ -132,7 +132,7 @@ contract Xct is Ownable {
     balances[msg.sender] = balances[msg.sender].sub(_value); // will fail on insufficient funds
     balances[_to] = balances[_to].add(_value);
 
-    Transfer(msg.sender, _to, _value);
+    emit Transfer(msg.sender, _to, _value);
     return true;
   }
 
@@ -155,7 +155,7 @@ contract Xct is Ownable {
     balances[_to] = balances[_to].add(_value);
     allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
 
-    Transfer(_from, _to, _value);
+    emit Transfer(_from, _to, _value);
     return true;
   }
 
@@ -189,7 +189,7 @@ contract Xct is Ownable {
 
     allowed[msg.sender][_spender] = _value;
 
-    Approval(msg.sender, _spender, _value);
+    emit Approval(msg.sender, _spender, _value);
     return true;
   }
 
@@ -231,8 +231,8 @@ contract Xct is Ownable {
     balances[owner] = balances[owner].sub(_value);
     currentSupply = currentSupply.sub(_value);
 
-    Burn(owner, _value);
-    Transfer(owner, address(0x0), _value);
+    emit Burn(owner, _value);
+    emit Transfer(owner, address(0x0), _value);
   }
 
 }

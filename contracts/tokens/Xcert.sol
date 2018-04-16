@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.21;
 
 import "../math/SafeMath.sol";
 import "../ownership/Ownable.sol";
@@ -267,7 +267,7 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
     require(!(getApproved(_tokenId) == address(0) && _approved == address(0)));
 
     idToApprovals[_tokenId] = _approved;
-    Approval(owner, _approved, _tokenId);
+    emit Approval(owner, _approved, _tokenId);
   }
 
   /*
@@ -283,7 +283,7 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
   {
     require(_operator != address(0));
     ownerToOperators[msg.sender][_operator] = _approved;
-    ApprovalForAll(msg.sender, _operator, _approved);
+    emit ApprovalForAll(msg.sender, _operator, _approved);
   }
 
   /*
@@ -361,7 +361,7 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
     removeNFToken(from, _tokenId);
     addNFToken(_to, _tokenId);
 
-    Transfer(from, _to, _tokenId);
+    emit Transfer(from, _to, _tokenId);
   }
 
   /*
@@ -388,7 +388,7 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
     idToProof[_id].push(_proof);
     addNFToken(_to, _id);
 
-    Transfer(address(0), _to, _id);
+    emit Transfer(address(0), _to, _id);
     return true;
   }
 
@@ -414,7 +414,7 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
   {
     require(idToOwner[_tokenId] == _owner);
     delete idToApprovals[_tokenId];
-    Approval(_owner, 0, _tokenId);
+    emit Approval(_owner, 0, _tokenId);
   }
 
   /*
@@ -542,7 +542,7 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
   {
     require(_target != address(0));
     addressToMintAuthorized[_target] = _authorized;
-    MintAuthorizedAddress(_target, _authorized);
+    emit MintAuthorizedAddress(_target, _authorized);
   }
 
   /*

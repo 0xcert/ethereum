@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.21;
 
 
 import "../math/SafeMath.sol";
@@ -201,13 +201,13 @@ contract Trader is ERC165 {
 
     if(transferPerformed[transferData.claim])
     {
-      LogError(uint8(Errors.TRANSFER_ALREADY_PERFORMED), transferData.claim);
+      emit LogError(uint8(Errors.TRANSFER_ALREADY_PERFORMED), transferData.claim);
       return false;
     }
 
     if(transferCancelled[transferData.claim])
     {
-      LogError(uint8(Errors.TRANSFER_CANCELLED), transferData.claim);
+      emit LogError(uint8(Errors.TRANSFER_CANCELLED), transferData.claim);
       return false;
     }
 
@@ -215,13 +215,13 @@ contract Trader is ERC165 {
     {
       if(!_canPayFee(transferData.to, transferData.feeAmounts))
       {
-        LogError(uint8(Errors.INSUFFICIENT_BALANCE_OR_ALLOWANCE), transferData.claim);
+        emit LogError(uint8(Errors.INSUFFICIENT_BALANCE_OR_ALLOWANCE), transferData.claim);
         return false;
       }
 
       if(!_isAllowed(transferData.from, transferData.nfToken, transferData.id))
       {
-        LogError(uint8(Errors.NFTOKEN_NOT_ALLOWED), transferData.claim);
+        emit LogError(uint8(Errors.NFTOKEN_NOT_ALLOWED), transferData.claim);
         return false;
       }
     }
@@ -232,7 +232,7 @@ contract Trader is ERC165 {
 
     _payfeeAmounts(transferData.feeAddresses, transferData.feeAmounts, transferData.to);
 
-    LogPerformTransfer(
+    emit LogPerformTransfer(
       transferData.from,
       transferData.to,
       transferData.nfToken,
@@ -269,7 +269,7 @@ contract Trader is ERC165 {
 
     transferCancelled[claim] = true;
 
-    LogCancelTransfer(
+    emit LogCancelTransfer(
       _addresses[0],
       _addresses[1],
       _addresses[2],

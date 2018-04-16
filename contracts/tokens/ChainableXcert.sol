@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.21;
 
 import "./Xcert.sol";
 
@@ -33,7 +33,7 @@ contract ChainableXcert is Xcert {
 
     idToProof[_tokenId].push(_proof);
 
-    ChainedProof(_tokenId, _proof, idToProof[_tokenId].length.sub(1));
+    emit ChainedProof(_tokenId, _proof, idToProof[_tokenId].length.sub(1));
   }
 
   /*

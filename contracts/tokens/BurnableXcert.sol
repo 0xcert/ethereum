@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.21;
 
 import "./Xcert.sol";
 
@@ -28,7 +28,7 @@ contract BurnableXcert is Xcert {
     delete idToUri[_tokenId];
     delete idToProof[_tokenId];
 
-    Transfer(msg.sender, address(0), _tokenId);
+    emit Transfer(msg.sender, address(0), _tokenId);
   }
 
 }

@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.21;
 
 import "../math/SafeMath.sol";
 import "../tokens/Xct.sol";
@@ -216,13 +216,13 @@ contract Minter is ERC165 {
 
     if(mintPerformed[mintData.claim])
     {
-      LogError(uint8(Errors.MINT_ALREADY_PERFORMED), mintData.claim);
+      emit LogError(uint8(Errors.MINT_ALREADY_PERFORMED), mintData.claim);
       return false;
     }
 
     if(mintCancelled[mintData.claim])
     {
-      LogError(uint8(Errors.MINT_CANCELLED), mintData.claim);
+      emit LogError(uint8(Errors.MINT_CANCELLED), mintData.claim);
       return false;
     }
 
@@ -230,13 +230,13 @@ contract Minter is ERC165 {
     {
       if(!_canPayFee(mintData.to, mintData.feeAmounts))
       {
-        LogError(uint8(Errors.INSUFFICIENT_BALANCE_OR_ALLOWANCE), mintData.claim);
+        emit LogError(uint8(Errors.INSUFFICIENT_BALANCE_OR_ALLOWANCE), mintData.claim);
         return false;
       }
 
       if(!_canMint(mintData.xcert))
       {
-        LogError(uint8(Errors.XCERT_NOT_ALLOWED), mintData.claim);
+        emit LogError(uint8(Errors.XCERT_NOT_ALLOWED), mintData.claim);
         return false;
       }
     }
@@ -247,7 +247,7 @@ contract Minter is ERC165 {
 
     _payfeeAmounts(mintData.feeAddresses, mintData.feeAmounts, mintData.to);
 
-    LogPerformMint(
+    emit LogPerformMint(
       mintData.to,
       mintData.xcert,
       mintData.id,
@@ -291,7 +291,7 @@ contract Minter is ERC165 {
 
     mintCancelled[claim] = true;
 
-    LogCancelMint(
+    emit LogCancelMint(
       _addresses[0],
       _addresses[1],
       _uints[0],
