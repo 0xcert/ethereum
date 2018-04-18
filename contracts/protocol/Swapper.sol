@@ -58,12 +58,6 @@ contract Swapper is ERC165 {
    */
   event LogPerformSwap(address indexed _from,
                        address _to,
-                       address[] _nfTokensFrom,
-                       uint256[] _idsFrom,
-                       address[] _nfTokensTo,
-                       uint256[] _idsTo,
-                       address[] _feeAddresses,
-                       uint256[] _feeAmounts,
                        bytes32 _swapClaim);
 
 
@@ -72,16 +66,11 @@ contract Swapper is ERC165 {
    */
   event LogCancelSwap(address indexed _from,
                       address _to,
-                      address[] _nfTokensFrom,
-                      uint256[] _idsFrom,
-                      address[] _nfTokensTo,
-                      uint256[] _idsTo,
-                      address[] _feeAddresses,
-                      uint256[] _feeAmounts,
                       bytes32 _swapClaim);
 
   /*
    * @dev This event emmits when an error occurs.
+   * NOTE: WILL BE REPLACED IN solidity ^0.4.22; WITH REVERT MESSAGES
    */
   event LogError(uint8 indexed errorId,
                  bytes32 indexed claim);
@@ -251,12 +240,6 @@ contract Swapper is ERC165 {
     emit LogPerformSwap(
       swapData.from,
       swapData.to,
-      swapData.nfTokensFrom,
-      swapData.idsFrom,
-      swapData.nfTokensTo,
-      swapData.idsTo,
-      swapData.feeAddresses,
-      swapData.feeAmounts,
       swapData.claim
     );
 
@@ -292,12 +275,6 @@ contract Swapper is ERC165 {
     emit LogCancelSwap(
       _addresses[0],
       _addresses[1],
-      _getAddressSubArrayTo(_addresses, 2, _uints[2].add(2)),
-      _getUintSubArrayTo(_uints, 4, _uints[2].add(4)),
-      _getAddressSubArrayTo(_addresses, _uints[2].add(2), (_uints[2].add(2)).add(_uints[3])),
-      _getUintSubArrayTo(_uints, _uints[2].add(4), (_uints[2].add(4)).add(_uints[3])),
-      _getAddressSubArrayTo(_addresses, (_uints[2].add(2)).add(_uints[3]), _addresses.length),
-      _getUintSubArrayTo(_uints,(_uints[2].add(4)).add(_uints[3]), _uints.length),
       claim
     );
   }

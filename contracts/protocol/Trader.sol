@@ -58,10 +58,6 @@ contract Trader is ERC165 {
    */
   event LogPerformTransfer(address indexed _from,
                            address _to,
-                           address _nfToken,
-                           uint256 _nfTokenId,
-                           address[] _feeAddresses,
-                           uint256[] _feeAmounts,
                            bytes32 _nfTokenTransferClaim);
 
   /*
@@ -69,14 +65,11 @@ contract Trader is ERC165 {
    */
   event LogCancelTransfer(address indexed _from,
                           address _to,
-                          address _nfToken,
-                          uint256 _nfTokenId,
-                          address[] _feeAddresses,
-                          uint256[] _feeAmounts,
                           bytes32 _nfTokenTransferClaim);
 
   /*
    * @dev This event emmits when an error occurs.
+   * NOTE: WILL BE REPLACED IN solidity ^0.4.22; WITH REVERT MESSAGES
    */
   event LogError(uint8 indexed errorId,
                  bytes32 indexed claim);
@@ -235,10 +228,6 @@ contract Trader is ERC165 {
     emit LogPerformTransfer(
       transferData.from,
       transferData.to,
-      transferData.nfToken,
-      transferData.id,
-      transferData.feeAddresses,
-      transferData.feeAmounts,
       transferData.claim
     );
 
@@ -272,10 +261,6 @@ contract Trader is ERC165 {
     emit LogCancelTransfer(
       _addresses[0],
       _addresses[1],
-      _addresses[2],
-      _uints[0],
-      _getAddressSubArray(_addresses, 3),
-      _getUintSubArray(_uints, 3),
       claim
     );
   }

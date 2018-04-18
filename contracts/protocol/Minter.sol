@@ -58,11 +58,6 @@ contract Minter is ERC165 {
    */
   event LogPerformMint(address _to,
                        address indexed _xcert,
-                       uint256 _id,
-                       string _proof,
-                       string _uri,
-                       address[] _feeAddresses,
-                       uint256[] _feeAmounts,
                        bytes32 _xcertMintClaim);
 
   /*
@@ -70,15 +65,12 @@ contract Minter is ERC165 {
    */
   event LogCancelMint(address _to,
                       address indexed _xcert,
-                      uint256 _id,
-                      string _proof,
-                      string _uri,
-                      address[] _feeAddresses,
-                      uint256[] _feeAmounts,
                       bytes32 _xcertMintClaim);
+
 
   /*
    * @dev This event emmits when an error occurs.
+   * NOTE: WILL BE REPLACED IN solidity ^0.4.22; WITH REVERT MESSAGES
    */
   event LogError(uint8 indexed errorId,
                  bytes32 indexed claim);
@@ -250,11 +242,6 @@ contract Minter is ERC165 {
     emit LogPerformMint(
       mintData.to,
       mintData.xcert,
-      mintData.id,
-      mintData.proof,
-      mintData.uri,
-      mintData.feeAddresses,
-      mintData.feeAmounts,
       mintData.claim
     );
 
@@ -294,11 +281,6 @@ contract Minter is ERC165 {
     emit LogCancelMint(
       _addresses[0],
       _addresses[1],
-      _uints[0],
-      _proof,
-      _uri,
-      _getAddressSubArray(_addresses, 2),
-      _getUintSubArray(_uints, 3),
       claim
     );
   }
