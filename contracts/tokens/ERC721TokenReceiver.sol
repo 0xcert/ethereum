@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.21;
 
 /// @dev Note: the ERC-165 identifier for this interface is 0xf0b9e5ba
 interface ERC721TokenReceiver {

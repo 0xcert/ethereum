@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.21;
 
 import "./Xcert.sol";
 
@@ -7,7 +7,7 @@ contract ChainableXcert is Xcert {
   /*
    * @dev This emits when additional proof is chained.
    */
-  event ChainedProof(uint256 indexed tokenId, string proof, uint256 index);
+  event ChainedProof(uint256 indexed tokenId, uint256 proofIndex);
 
   function ChainableXcert(string _name,
                           string _symbol)
@@ -33,7 +33,7 @@ contract ChainableXcert is Xcert {
 
     idToProof[_tokenId].push(_proof);
 
-    ChainedProof(_tokenId, _proof, idToProof[_tokenId].length.sub(1));
+    emit ChainedProof(_tokenId, idToProof[_tokenId].length.sub(1));
   }
 
   /*

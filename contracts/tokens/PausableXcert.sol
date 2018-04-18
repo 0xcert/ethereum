@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.21;
 
 import "./Xcert.sol";
 
@@ -47,7 +47,7 @@ contract PausableXcert is Xcert {
   {
     require(isPaused != _isPaused);
     isPaused = _isPaused;
-    IsPaused(_isPaused);
+    emit IsPaused(_isPaused);
   }
 
 }
