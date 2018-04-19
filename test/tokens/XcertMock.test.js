@@ -29,7 +29,7 @@ contract('XcertMock', (accounts) => {
 
   it('correctly chains additional proof', async () => {
     await xcert.chain(id1, mockProof2);
-    var proof = await xcert.getProof(id1);
+    var proof = await xcert.tokenProof(id1);
     assert.equal(proof, mockProof2);
   });
 

@@ -15,7 +15,7 @@ contract('ChainableXcert', (accounts) => {
 
   it('correctly chains additional proof', async () => {
     await xcert.chain(id1, mockProof2);
-    var proof = await xcert.getProof(id1);
+    var proof = await xcert.tokenProof(id1);
     assert.equal(proof, mockProof2);
   });
 
@@ -25,20 +25,20 @@ contract('ChainableXcert', (accounts) => {
 
   it('correctly gets proof by index', async () => {
     await xcert.chain(id1, mockProof2);
-    var proof = await xcert.getProofByIndex(id1, 1);
+    var proof = await xcert.tokenProofByIndex(id1, 1);
     assert.equal(proof, mockProof2);
   });
 
   it('reverts trying to get proof for none existant index', async () => {
-    await assertRevert(xcert.getProofByIndex(id1, 1));
+    await assertRevert(xcert.tokenProofByIndex(id1, 1));
   });
 
   it('returns correct proof count', async () => {
-    var proofCount = await xcert.getProofCount(id1);
+    var proofCount = await xcert.tokenProofCount(id1);
     assert.equal(proofCount, 1);
 
     await xcert.chain(id1, mockProof2);
-    proofCount = await xcert.getProofCount(id1);
+    proofCount = await xcert.tokenProofCount(id1);
     assert.equal(proofCount, 2);
   });
 });
