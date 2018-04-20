@@ -14,7 +14,7 @@ contract ChainableXcert is Xcert {
     Xcert(_name, _symbol)
     public
   {
-    supportedInterfaces[0xc1dcb551] = true; // ChainableXcert
+    supportedInterfaces[0x6ea3dd92] = true; // ChainableXcert
   }
 
   /*
@@ -41,7 +41,7 @@ contract ChainableXcert is Xcert {
    * @param _tokenId Id of the Xcert we want to get proof of.
    * @param _index Index of the proof we want to get.
    */
-  function getProofByIndex(uint256 _tokenId,
+  function tokenProofByIndex(uint256 _tokenId,
                            uint256 _index)
     validNFToken(_tokenId)
     external
@@ -56,7 +56,7 @@ contract ChainableXcert is Xcert {
    * @dev Gets the count of all proofs for a Xcert.
    * @param _tokenId Id of the Xcert we want to get proof of.
    */
-  function getProofCount(uint256 _tokenId)
+  function tokenProofCount(uint256 _tokenId)
     validNFToken(_tokenId)
     external
     view

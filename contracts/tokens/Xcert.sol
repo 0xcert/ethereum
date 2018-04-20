@@ -158,7 +158,7 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
     supportedInterfaces[0x01ffc9a7] = true; // ERC165
     supportedInterfaces[0x80ac58cd] = true; // ERC721
     supportedInterfaces[0x5b5e139f] = true; // ERC721Metadata
-    supportedInterfaces[0x58c66b9f] = true; // Xcert
+    supportedInterfaces[0x355d09e9] = true; // Xcert
   }
 
   /*
@@ -396,7 +396,7 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
    * @dev Gets proof for _tokenId.
    * @param _tokenId Id of the NFToken we want to get proof of.
    */
-  function getProof(uint256 _tokenId)
+  function tokenProof(uint256 _tokenId)
     validNFToken(_tokenId)
     external
     view

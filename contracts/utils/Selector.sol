@@ -13,7 +13,7 @@ contract Selector {
     function calculateXcertSelector() public pure returns (bytes4) {
       Xcert i;
       return i.mint.selector
-         ^ i.getProof.selector
+         ^ i.tokenProof.selector
          ^ i.setMintAuthorizedAddress.selector
          ^ i.isMintAuthorizedAddress.selector;
     }
@@ -31,8 +31,8 @@ contract Selector {
     function calculateChainableXcertSelector() public pure returns (bytes4) {
       ChainableXcert i;
       return i.chain.selector
-         ^ i.getProofByIndex.selector
-         ^ i.getProofCount.selector;
+         ^ i.tokenProofByIndex.selector
+         ^ i.tokenProofCount.selector;
     }
 
     function calculateMinterSelector() public pure returns (bytes4) {

@@ -234,7 +234,7 @@ contract('Xcert', (accounts) => {
     var recipient = accounts[2];
 
     await xcert.mint(sender, id2, mockProof, 'url2');
-    var { logs } = await xcert.safeTransferFrom(sender, recipient, id2, {from: sender});
+    var { logs } = await xcert.safeTransferFrom(sender, recipient, id2, "", {from: sender});
     let transferEvent = logs.find(e => e.event === 'Transfer');
     assert.notEqual(transferEvent, undefined);
 
@@ -252,7 +252,7 @@ contract('Xcert', (accounts) => {
     var recipient = xcert.address;
 
     await xcert.mint(sender, id2, mockProof, 'url2');
-    await assertRevert(xcert.safeTransferFrom(sender, recipient, id2, {from: sender}));
+    await assertRevert(xcert.safeTransferFrom(sender, recipient, id2, "", {from: sender}));
   });
 
   it('corectly safe transfers NFToken from owner to smart contract that can recieve NFTokens', async () => {
@@ -261,7 +261,7 @@ contract('Xcert', (accounts) => {
     var recipient = tokenReceiverMock.address;
 
     await xcert.mint(sender, id2, mockProof, 'url2');
-    var { logs } = await xcert.safeTransferFrom(sender, recipient, id2, {from: sender});
+    var { logs } = await xcert.safeTransferFrom(sender, recipient, id2, "", {from: sender});
     let transferEvent = logs.find(e => e.event === 'Transfer');
     assert.notEqual(transferEvent, undefined);
 
@@ -286,7 +286,7 @@ contract('Xcert', (accounts) => {
 
   it('returns the correct proof for NFToken id', async () => {
     await xcert.mint(accounts[1], id2, mockProof, 'url2');
-    var proof = await xcert.getProof(id2);
+    var proof = await xcert.tokenProof(id2);
     assert.equal(proof, mockProof);
   });
 
