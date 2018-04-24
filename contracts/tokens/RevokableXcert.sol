@@ -4,7 +4,7 @@ import "./Xcert.sol";
 
 contract RevokableXcert is Xcert {
 
-  function RevokableXcert(string _name, string _symbol)
+  constructor(string _name, string _symbol)
     Xcert(_name, _symbol)
     public
   {

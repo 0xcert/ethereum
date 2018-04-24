@@ -169,7 +169,7 @@ contract('Trader', (accounts) => {
         it('successfuly cancels transfer', async () => {
           var { logs } = await trader.cancelTransfer(claimAddressArray, claimUintArray, {from: from});
 
-          let cancelEvent = logs.find(e => e.event === 'LogCancelTransfer');
+          let cancelEvent = logs.find(e => e.event === 'CancelTransfer');
           assert.notEqual(cancelEvent, undefined);
         });
 
@@ -184,7 +184,7 @@ contract('Trader', (accounts) => {
 
           let { logs } = await trader.performTransfer(claimAddressArray, claimUintArray, v, r, s, false, {from: to});
 
-          let event = logs.find(e => e.event === 'LogPerformTransfer');
+          let event = logs.find(e => e.event === 'PerformTransfer');
           assert.notEqual(event, undefined);
 
           await assertRevert(trader.cancelTransfer(claimAddressArray, claimUintArray, {from: to}));
@@ -203,7 +203,7 @@ contract('Trader', (accounts) => {
 
             let { logs } = await trader.performTransfer(claimAddressArray, claimUintArray, v, r, s, true, {from: to});
 
-            let event = logs.find(e => e.event === 'LogPerformTransfer');
+            let event = logs.find(e => e.event === 'PerformTransfer');
             assert.notEqual(event, undefined);
 
             var owner = await xcert.ownerOf(id1);
@@ -221,20 +221,15 @@ contract('Trader', (accounts) => {
             await token.approve(tokenProxy.address, 10, {from: to});
             await xcert.approve(nfTokenProxy.address, id1, {from: from});
 
-            let { logs } = await trader.performTransfer(claimAddressArray, claimUintArray, v, r, s, true, {from: to});
-
-            let event = logs.find(e => e.event === 'LogError');
-            assert.notEqual(event, undefined);
-
+            //TODO checks for revert message
+            await assertRevert(trader.performTransfer(claimAddressArray, claimUintArray, v, r, s, true, {from: to}));
           });
 
           it('should fail when not allowed to transfer NFToken', async () => {
             await token.approve(tokenProxy.address, 10, {from: to});
 
-            let { logs } = await trader.performTransfer(claimAddressArray, claimUintArray, v, r, s, true, {from: to});
-
-            let event = logs.find(e => e.event === 'LogError');
-            assert.notEqual(event, undefined);
+            //TODO checks for revert message
+            await assertRevert(trader.performTransfer(claimAddressArray, claimUintArray, v, r, s, true, {from: to}));
           });
 
           it('throws when _to address is not the one performing transfer', async () => {
@@ -249,25 +244,22 @@ contract('Trader', (accounts) => {
 
             var { logs } = await trader.performTransfer(claimAddressArray, claimUintArray, v, r, s, true, {from: to});
 
-            let transferEvent = logs.find(e => e.event === 'LogPerformTransfer');
+            let transferEvent = logs.find(e => e.event === 'PerformTransfer');
             assert.notEqual(transferEvent, undefined);
 
-            var { logs } = await trader.performTransfer(claimAddressArray, claimUintArray, v, r, s, true, {from: to});
-            let errorEvent = logs.find(e => e.event === 'LogError');
-            assert.notEqual(errorEvent, undefined);
+            //TODO checks for revert message
+            await assertRevert(trader.performTransfer(claimAddressArray, claimUintArray, v, r, s, true, {from: to}));
           });
 
           it('fails trying to perform canceled transfer', async () => {
 
             var { logs } = await trader.cancelTransfer(claimAddressArray, claimUintArray, {from: from});
 
-            let cancelEvent = logs.find(e => e.event === 'LogCancelTransfer');
+            let cancelEvent = logs.find(e => e.event === 'CancelTransfer');
             assert.notEqual(cancelEvent, undefined);
 
-            var { logs } = await trader.performTransfer(claimAddressArray, claimUintArray, v, r, s, true, {from: to});
-
-            let errorEvent = logs.find(e => e.event === 'LogError');
-            assert.notEqual(errorEvent, undefined);
+            //TODO checks for revert message
+            await assertRevert(trader.performTransfer(claimAddressArray, claimUintArray, v, r, s, true, {from: to}));
           });
 
         });
@@ -362,7 +354,7 @@ contract('Trader', (accounts) => {
 
         let { logs } = await trader.performTransfer(claimAddressArray, claimUintArray, v, r, s, true, {from: to});
 
-        let event = logs.find(e => e.event === 'LogPerformTransfer');
+        let event = logs.find(e => e.event === 'PerformTransfer');
         assert.notEqual(event, undefined);
 
         var owner = await xcert.ownerOf(id1);

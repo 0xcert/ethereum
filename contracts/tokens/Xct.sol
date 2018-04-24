@@ -91,7 +91,7 @@ contract Xct is Ownable {
   /**
    * @dev Contract constructor.
    */
-  function Xct()
+  constructor()
     public
   {
     name = "0xcert Protocol Token";

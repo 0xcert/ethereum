@@ -1,4 +1,4 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.23;
 
 /**
  * @title Ownable
@@ -19,7 +19,7 @@ contract Ownable {
   /**
    * @dev The constructor sets the original `owner` of the contract to the sender account.
    */
-  function Ownable()
+  constructor()
     public
   {
     owner = msg.sender;

@@ -234,7 +234,7 @@ contract('Swapper', (accounts) => {
         it('successfuly cancels swap', async () => {
           var { logs } = await swapper.cancelSwap(claimAddressArray, claimUintArray, {from: from});
 
-          let cancelEvent = logs.find(e => e.event === 'LogCancelSwap');
+          let cancelEvent = logs.find(e => e.event === 'CancelSwap');
           assert.notEqual(cancelEvent, undefined);
         });
 
@@ -250,7 +250,7 @@ contract('Swapper', (accounts) => {
 
           let { logs } = await swapper.performSwap(claimAddressArray, claimUintArray, v, r, s, false, {from: to});
 
-          let event = logs.find(e => e.event === 'LogPerformSwap');
+          let event = logs.find(e => e.event === 'PerformSwap');
           assert.notEqual(event, undefined);
 
           await assertRevert(swapper.cancelSwap(claimAddressArray, claimUintArray, {from: to}));
@@ -269,7 +269,7 @@ contract('Swapper', (accounts) => {
 
             let { logs } = await swapper.performSwap(claimAddressArray, claimUintArray, v, r, s, true, {from: to});
 
-            let event = logs.find(e => e.event === 'LogPerformSwap');
+            let event = logs.find(e => e.event === 'PerformSwap');
             assert.notEqual(event, undefined);
 
             var owner1 = await xcert.ownerOf(id1);
@@ -287,18 +287,16 @@ contract('Swapper', (accounts) => {
             await token.approve(tokenProxy.address, 20, {from: to});
             await xcert.approve(nfTokenProxy.address, id1, {from: from});
 
-            let { logs } = await swapper.performSwap(claimAddressArray, claimUintArray, v, r, s, true, {from: to});
-            let event = logs.find(e => e.event === 'LogError');
-            assert.notEqual(event, undefined);
+            //TODO checks for revert message
+            await assertRevert(swapper.performSwap(claimAddressArray, claimUintArray, v, r, s, true, {from: to}));
           });
 
           it('should fail with unsofficient allowence', async () => {
             await xcert.approve(nfTokenProxy.address, id1, {from: from});
             await xcert.approve(nfTokenProxy.address, id2, {from: to});
 
-            let { logs } = await swapper.performSwap(claimAddressArray, claimUintArray, v, r, s, true, {from: to});
-            let event = logs.find(e => e.event === 'LogError');
-            assert.notEqual(event, undefined);
+            //TODO checks for revert message
+            await assertRevert(swapper.performSwap(claimAddressArray, claimUintArray, v, r, s, true, {from: to}));
           });
 
           it('throws when _to address is not the one performing transfer', async () => {
@@ -362,7 +360,7 @@ contract('Swapper', (accounts) => {
 
         let { logs } = await swapper.performSwap(claimAddressArray, claimUintArray, v, r, s, true, {from: to});
 
-        let event = logs.find(e => e.event === 'LogPerformSwap');
+        let event = logs.find(e => e.event === 'PerformSwap');
         assert.notEqual(event, undefined);
 
         var owner1 = await xcert.ownerOf(id1);
@@ -404,7 +402,7 @@ contract('Swapper', (accounts) => {
 
         let { logs } = await swapper.performSwap(claimAddressArray, claimUintArray, v, r, s, true, {from: to});
 
-        let event = logs.find(e => e.event === 'LogPerformSwap');
+        let event = logs.find(e => e.event === 'PerformSwap');
         assert.notEqual(event, undefined);
 
         var owner1 = await xcert.ownerOf(id1);

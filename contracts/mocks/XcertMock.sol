@@ -1,4 +1,4 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.23;
 
 import "../../contracts/tokens/BurnableXcert.sol";
 import "../../contracts/tokens/PausableXcert.sol";
@@ -7,7 +7,7 @@ import "../../contracts/tokens/RevokableXcert.sol";
 
 contract XcertMock is BurnableXcert, PausableXcert, ChainableXcert, RevokableXcert {
 
-function XcertMock(string _name, string _symbol)
+constructor(string _name, string _symbol)
     BurnableXcert(_name, _symbol)
     PausableXcert(_name, _symbol)
     ChainableXcert(_name, _symbol)

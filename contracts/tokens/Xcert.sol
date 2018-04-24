@@ -1,4 +1,4 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.23;
 
 import "../math/SafeMath.sol";
 import "../ownership/Ownable.sol";
@@ -150,7 +150,7 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
    * @param _name A descriptive name for a collection of NFTs.
    * @param _symbol An abbreviated name for NFTokens.
    */
-  function Xcert(string _name, string _symbol)
+  constructor(string _name, string _symbol)
     public
   {
     xcertName = _name;

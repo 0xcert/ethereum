@@ -1,4 +1,4 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.23;
 
 
 import "../math/SafeMath.sol";
@@ -56,23 +56,16 @@ contract Trader is ERC165 {
   /*
    * @dev This event emmits when NFToken changes ownership.
    */
-  event LogPerformTransfer(address indexed _from,
-                           address _to,
-                           bytes32 _nfTokenTransferClaim);
+  event PerformTransfer(address indexed _from,
+                        address _to,
+                        bytes32 _nfTokenTransferClaim);
 
   /*
    * @dev This event emmits when NFToken transfer order is canceled.
    */
-  event LogCancelTransfer(address indexed _from,
-                          address _to,
-                          bytes32 _nfTokenTransferClaim);
-
-  /*
-   * @dev This event emmits when an error occurs.
-   * NOTE: WILL BE REPLACED IN solidity ^0.4.22; WITH REVERT MESSAGES
-   */
-  event LogError(uint8 indexed errorId,
-                 bytes32 indexed claim);
+  event CancelTransfer(address indexed _from,
+                       address _to,
+                       bytes32 _nfTokenTransferClaim);
 
 
   /*
@@ -96,9 +89,9 @@ contract Trader is ERC165 {
    * @param _tokenTransferProxy Address pointing to TokenTransferProxy contract.
    * @param _nfTokenTransferProxy Address pointing to none-fungible token transfer proxy contract.
    */
-  function Trader(address _xctToken,
-                  address _tokenTransferProxy,
-                  address _nfTokenTransferProxy)
+  constructor(address _xctToken,
+              address _tokenTransferProxy,
+              address _nfTokenTransferProxy)
     public
   {
     TOKEN_CONTRACT = _xctToken;
@@ -161,7 +154,6 @@ contract Trader is ERC165 {
                            bytes32 _s,
                            bool _throwIfNotTransferable)
     public
-    returns (bool)
   {
     require(_addresses.length == _uints.length);
 
@@ -192,31 +184,13 @@ contract Trader is ERC165 {
       _s
     ));
 
-    if(transferPerformed[transferData.claim])
-    {
-      emit LogError(uint8(Errors.TRANSFER_ALREADY_PERFORMED), transferData.claim);
-      return false;
-    }
-
-    if(transferCancelled[transferData.claim])
-    {
-      emit LogError(uint8(Errors.TRANSFER_CANCELLED), transferData.claim);
-      return false;
-    }
+    require(!transferPerformed[transferData.claim], "Transfer already performed.");
+    require(!transferCancelled[transferData.claim], "Transfer canceled.");
 
     if (_throwIfNotTransferable)
     {
-      if(!_canPayFee(transferData.to, transferData.feeAmounts))
-      {
-        emit LogError(uint8(Errors.INSUFFICIENT_BALANCE_OR_ALLOWANCE), transferData.claim);
-        return false;
-      }
-
-      if(!_isAllowed(transferData.from, transferData.nfToken, transferData.id))
-      {
-        emit LogError(uint8(Errors.NFTOKEN_NOT_ALLOWED), transferData.claim);
-        return false;
-      }
+      require(_canPayFee(transferData.to, transferData.feeAmounts), "Insufficient balance of allowance");
+      require(_isAllowed(transferData.from, transferData.nfToken, transferData.id), "Token transfer not approved.");
     }
 
     transferPerformed[transferData.claim] = true;
@@ -225,13 +199,11 @@ contract Trader is ERC165 {
 
     _payfeeAmounts(transferData.feeAddresses, transferData.feeAmounts, transferData.to);
 
-    emit LogPerformTransfer(
+    emit PerformTransfer(
       transferData.from,
       transferData.to,
       transferData.claim
     );
-
-    return true;
   }
 
   /*
@@ -258,7 +230,7 @@ contract Trader is ERC165 {
 
     transferCancelled[claim] = true;
 
-    emit LogCancelTransfer(
+    emit CancelTransfer(
       _addresses[0],
       _addresses[1],
       claim

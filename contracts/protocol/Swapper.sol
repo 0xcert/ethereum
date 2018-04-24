@@ -1,4 +1,4 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.23;
 
 
 import "../math/SafeMath.sol";
@@ -56,24 +56,17 @@ contract Swapper is ERC165 {
   /*
    * @dev This event emmits when NFToken changes ownership.
    */
-  event LogPerformSwap(address indexed _from,
-                       address _to,
-                       bytes32 _swapClaim);
+  event PerformSwap(address indexed _from,
+                    address _to,
+                    bytes32 _swapClaim);
 
 
   /*
    * @dev This event emmits when NFToken transfer order is canceled.
    */
-  event LogCancelSwap(address indexed _from,
-                      address _to,
-                      bytes32 _swapClaim);
-
-  /*
-   * @dev This event emmits when an error occurs.
-   * NOTE: WILL BE REPLACED IN solidity ^0.4.22; WITH REVERT MESSAGES
-   */
-  event LogError(uint8 indexed errorId,
-                 bytes32 indexed claim);
+  event CancelSwap(address indexed _from,
+                   address _to,
+                   bytes32 _swapClaim);
 
 
   /*
@@ -99,9 +92,9 @@ contract Swapper is ERC165 {
    * @param _tokenTransferProxy Address pointing to TokenTransferProxy contract.
    * @param _nfTokenTransferProxy Address pointing to none-fungible token transfer proxy contract.
    */
-  function Swapper(address _xctToken,
-                   address _tokenTransferProxy,
-                   address _nfTokenTransferProxy)
+  constructor(address _xctToken,
+              address _tokenTransferProxy,
+              address _nfTokenTransferProxy)
     public
   {
     TOKEN_CONTRACT = _xctToken;
@@ -169,7 +162,6 @@ contract Swapper is ERC165 {
                        bytes32 _s,
                        bool _throwIfNotSwappable)
     public
-    returns (bool)
   {
     require(_addresses.length.add(2) == _uints.length);
     require(_uints[2] > 0);
@@ -204,31 +196,13 @@ contract Swapper is ERC165 {
       _s
     ));
 
-    if(swapPerformed[swapData.claim])
-    {
-      emit LogError(uint8(Errors.SWAP_ALREADY_PERFORMED), swapData.claim);
-      return false;
-    }
-
-    if(swapCancelled[swapData.claim])
-    {
-      emit LogError(uint8(Errors.SWAP_CANCELLED), swapData.claim);
-      return false;
-    }
+    require(!swapPerformed[swapData.claim], "Swap already performed.");
+    require(!swapCancelled[swapData.claim], "Swap canceled.");
 
     if (_throwIfNotSwappable)
     {
-      if(!_canPayFee(swapData.to, swapData.feeAmounts))
-      {
-        emit LogError(uint8(Errors.INSUFFICIENT_BALANCE_OR_ALLOWANCE), swapData.claim);
-        return false;
-      }
-
-      if(!_areTransfersAllowed(swapData))
-      {
-        emit LogError(uint8(Errors.NFTOKEN_NOT_ALLOWED), swapData.claim);
-        return false;
-      }
+      require(_canPayFee(swapData.to, swapData.feeAmounts), "Insufficient balance or allowance.");
+      require(_areTransfersAllowed(swapData), "NFToken transfer not approved");
     }
 
     swapPerformed[swapData.claim] = true;
@@ -237,13 +211,11 @@ contract Swapper is ERC165 {
 
     _payfeeAmounts(swapData.feeAddresses, swapData.feeAmounts, swapData.to);
 
-    emit LogPerformSwap(
+    emit PerformSwap(
       swapData.from,
       swapData.to,
       swapData.claim
     );
-
-    return true;
   }
 
   /*
@@ -272,7 +244,7 @@ contract Swapper is ERC165 {
 
     require(!swapPerformed[claim]);
 
-    emit LogCancelSwap(
+    emit CancelSwap(
       _addresses[0],
       _addresses[1],
       claim
