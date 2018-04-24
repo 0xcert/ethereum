@@ -1,5 +1,5 @@
 
-pragma solidity 0.4.21;
+pragma solidity 0.4.23;
 
 /*
  * @dev based od: https://github.com/0xProject/contracts/blob/master/contracts/TokenTransferProxy.sol

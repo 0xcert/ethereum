@@ -14,7 +14,7 @@ contract PausableXcert is Xcert {
    */
   bool public isPaused;
 
-  function PausableXcert(string _name, string _symbol)
+  constructor(string _name, string _symbol)
     Xcert(_name, _symbol)
     public
   {

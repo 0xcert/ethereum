@@ -164,7 +164,7 @@ contract('Minter', (accounts) => {
         it('successfuly cancels mint', async () => {
           var { logs } = await minter.cancelMint(mintAddressArray, mintUintArray, mockProof, uri, {from: owner});
 
-          let cancelEvent = logs.find(e => e.event === 'LogCancelMint');
+          let cancelEvent = logs.find(e => e.event === 'CancelMint');
           assert.notEqual(cancelEvent, undefined);
         });
 
@@ -179,7 +179,7 @@ contract('Minter', (accounts) => {
 
           let { logs } = await minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, false, {from: to});
 
-          let event = logs.find(e => e.event === 'LogPerformMint');
+          let event = logs.find(e => e.event === 'PerformMint');
           assert.notEqual(event, undefined);
 
           await assertRevert(minter.cancelMint(mintAddressArray, mintUintArray, mockProof, uri, {from: owner}));
@@ -197,7 +197,7 @@ contract('Minter', (accounts) => {
 
             let { logs } = await minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to});
 
-            let event = logs.find(e => e.event === 'LogPerformMint');
+            let event = logs.find(e => e.event === 'PerformMint');
             assert.notEqual(event, undefined);
 
             var tokenOwner = await xcert.ownerOf(id1);
@@ -221,38 +221,29 @@ contract('Minter', (accounts) => {
             await token.approve(tokenProxy.address, 20, {from: to});
             await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
             await minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to});
-            let { logs } = await minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to});
-
-            let event = logs.find(e => e.event === 'LogError');
-            assert.notEqual(event, undefined);
+            //TODO checks for revert message
+            await assertRevert(minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to}));
           });
 
           it('fails when approved token amount is not sufficient', async () => {
             await token.approve(tokenProxy.address, 10, {from: to});
             await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
-            let { logs } = await minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to});
-
-            let event = logs.find(e => e.event === 'LogError');
-            assert.notEqual(event, undefined);
+            //TODO checks for revert message
+            await assertRevert(minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to}));
           });
 
-          it('fails when trying to perform canceled mint', async () => {
+          it('throws when trying to perform canceled mint', async () => {
             await minter.cancelMint(mintAddressArray, mintUintArray, mockProof, uri, {from: owner});
             await token.approve(tokenProxy.address, 20, {from: to});
             await xcert.setMintAuthorizedAddress(mintProxy.address, true, {from: owner});
-
-            let { logs } = await minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to});
-
-            let event = logs.find(e => e.event === 'LogError');
-            assert.notEqual(event, undefined);
+            //TODO checks for revert message
+            await assertRevert(minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to}));
           });
 
-          it('fails when does not have mint rights', async () => {
+          it('throws when does not have mint rights', async () => {
             await token.approve(tokenProxy.address, 20, {from: to});
-            let { logs } = await minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to});
-
-            let event = logs.find(e => e.event === 'LogError');
-            assert.notEqual(event, undefined);
+            //TODO checks for revert message
+            await assertRevert(minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to}));
           });
 
         });
@@ -294,7 +285,7 @@ contract('Minter', (accounts) => {
 
         let { logs } = await minter.performMint(mintAddressArray, mintUintArray, mockProof, uri, v, r, s, true, {from: to});
 
-        let event = logs.find(e => e.event === 'LogPerformMint');
+        let event = logs.find(e => e.event === 'PerformMint');
         assert.notEqual(event, undefined);
 
         var tokenOwner = await xcert.ownerOf(id1);

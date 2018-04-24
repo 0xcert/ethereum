@@ -33,4 +33,10 @@ contract('XcertMock', (accounts) => {
     assert.equal(proof, mockProof2);
   });
 
+  it('revokes NFToken id 1', async () => {
+    await xcert.revoke(id1, {from: accounts[0]});
+    const count = await xcert.balanceOf(accounts[0]);
+    assert.equal(count, 0);
+  });
+
 });

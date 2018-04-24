@@ -1,4 +1,4 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.23;
 
 import "../math/SafeMath.sol";
 import "../tokens/Xct.sol";
@@ -14,16 +14,6 @@ import "../tokens/ERC165.sol";
 contract Minter is ERC165 {
 
   using SafeMath for uint256;
-
-  /*
-   * @dev Enum of possible errors.
-   */
-  enum Errors {
-    MINT_ALREADY_PERFORMED, // Mint has already beed performed.
-    MINT_CANCELLED, // Mint was cancelled.
-    INSUFFICIENT_BALANCE_OR_ALLOWANCE, // Insufficient balance or allowance for XCT transfer.
-    XCERT_NOT_ALLOWED // Minting is not allowed
-  }
 
   /*
    * @dev Changes to state require at least 5000 gas.
@@ -56,24 +46,16 @@ contract Minter is ERC165 {
   /*
    * @dev This event emmits when xcert gets mint directly to the taker.
    */
-  event LogPerformMint(address _to,
-                       address indexed _xcert,
-                       bytes32 _xcertMintClaim);
+  event PerformMint(address _to,
+                    address indexed _xcert,
+                    bytes32 _xcertMintClaim);
 
   /*
    * @dev This event emmits when xcert mint order is canceled.
    */
-  event LogCancelMint(address _to,
-                      address indexed _xcert,
-                      bytes32 _xcertMintClaim);
-
-
-  /*
-   * @dev This event emmits when an error occurs.
-   * NOTE: WILL BE REPLACED IN solidity ^0.4.22; WITH REVERT MESSAGES
-   */
-  event LogError(uint8 indexed errorId,
-                 bytes32 indexed claim);
+  event CancelMint(address _to,
+                   address indexed _xcert,
+                   bytes32 _xcertMintClaim);
 
   /*
    * @dev Structure of data needed for mint.
@@ -98,9 +80,9 @@ contract Minter is ERC165 {
    * @param _tokenTransferProxy Address pointing to TokenTransferProxy contract.
    * @param _XcertProxy Address pointing to XcertProxy contract.
    */
-  function Minter(address _xctToken,
-                  address _tokenTransferProxy,
-                  address _xcertMintProxy)
+  constructor(address _xctToken,
+              address _tokenTransferProxy,
+              address _xcertMintProxy)
     public
   {
     XCT_TOKEN_CONTRACT = _xctToken;
@@ -170,7 +152,6 @@ contract Minter is ERC165 {
                        bytes32 _s,
                        bool _throwIfNotMintable)
     public
-    returns (bool)
   {
 
     require(_addresses.length.add(1) == _uints.length);
@@ -206,46 +187,27 @@ contract Minter is ERC165 {
       _s
     ));
 
-    if(mintPerformed[mintData.claim])
-    {
-      emit LogError(uint8(Errors.MINT_ALREADY_PERFORMED), mintData.claim);
-      return false;
-    }
-
-    if(mintCancelled[mintData.claim])
-    {
-      emit LogError(uint8(Errors.MINT_CANCELLED), mintData.claim);
-      return false;
-    }
+    require(!mintPerformed[mintData.claim],"Mint already performed.");
+    require(!mintCancelled[mintData.claim], "Mint canceled.");
 
     if (_throwIfNotMintable)
     {
-      if(!_canPayFee(mintData.to, mintData.feeAmounts))
-      {
-        emit LogError(uint8(Errors.INSUFFICIENT_BALANCE_OR_ALLOWANCE), mintData.claim);
-        return false;
-      }
-
-      if(!_canMint(mintData.xcert))
-      {
-        emit LogError(uint8(Errors.XCERT_NOT_ALLOWED), mintData.claim);
-        return false;
-      }
+      require(_canPayFee(mintData.to, mintData.feeAmounts), "Insufficient balance or allowance.");
+      require(_canMint(mintData.xcert), "Minting not approved.");
     }
 
     mintPerformed[mintData.claim] = true;
 
-    require(_mintViaXcertMintProxy(mintData));
+    require(_mintViaXcertMintProxy(mintData), "Mint unsuccessful.");
 
     _payfeeAmounts(mintData.feeAddresses, mintData.feeAmounts, mintData.to);
 
-    emit LogPerformMint(
+    emit PerformMint(
       mintData.to,
       mintData.xcert,
       mintData.claim
     );
 
-    return true;
   }
 
   /*
@@ -278,7 +240,7 @@ contract Minter is ERC165 {
 
     mintCancelled[claim] = true;
 
-    emit LogCancelMint(
+    emit CancelMint(
       _addresses[0],
       _addresses[1],
       claim

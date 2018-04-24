@@ -1,10 +1,11 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.23;
 
 import "./Xcert.sol";
 
 contract BurnableXcert is Xcert {
 
-  function BurnableXcert(string _name, string _symbol)
+  constructor(string _name,
+             string _symbol)
     Xcert(_name, _symbol)
     public
   {

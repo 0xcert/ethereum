@@ -9,8 +9,8 @@ contract ChainableXcert is Xcert {
    */
   event ChainedProof(uint256 indexed tokenId, uint256 proofIndex);
 
-  function ChainableXcert(string _name,
-                          string _symbol)
+  constructor(string _name,
+             string _symbol)
     Xcert(_name, _symbol)
     public
   {
