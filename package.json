@@ -48,7 +48,7 @@
     "ethjs-util": "^0.1.4",
     "ganache-cli": "^6.1.0",
     "npm-run-all": "^4.1.2",
-    "truffle": "^4.1.5",
+    "truffle": "git+https://github.com/trufflesuite/truffle.git",
     "truffle-flattener": "1.2.0",
     "web3-utils": "^1.0.0-beta.30"
   }

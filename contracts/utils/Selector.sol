@@ -4,6 +4,7 @@ import "../tokens/Xcert.sol";
 import "../tokens/BurnableXcert.sol";
 import "../tokens/PausableXcert.sol";
 import "../tokens/ChainableXcert.sol";
+import "../tokens/RevokableXcert.sol";
 import "../protocol/Minter.sol";
 import "../protocol/Trader.sol";
 import "../protocol/Swapper.sol";
@@ -33,6 +34,11 @@ contract Selector {
       return i.chain.selector
          ^ i.tokenProofByIndex.selector
          ^ i.tokenProofCount.selector;
+    }
+
+    function calculateRevokableXcertSelector() public pure returns (bytes4) {
+      RevokableXcert i;
+      return i.revoke.selector;
     }
 
     function calculateMinterSelector() public pure returns (bytes4) {

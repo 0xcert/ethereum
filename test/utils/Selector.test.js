@@ -2,6 +2,7 @@ const Xcert = artifacts.require('Xcert');
 const BurnableXcert = artifacts.require('BurnableXcert');
 const ChainableXcert = artifacts.require('ChainableXcert');
 const PausableXcert = artifacts.require('PausableXcert');
+const RevokableXcert = artifacts.require('RevokableXcert');
 const Minter = artifacts.require('Minter');
 const Trader = artifacts.require('Trader');
 const Swapper = artifacts.require('Swapper');
@@ -39,6 +40,13 @@ contract('Selector', (accounts) => {
   it('Checks ChainableXcert selector', async () => {
     var xcert = await ChainableXcert.new('Foo', 'F');
     var bytes = await selector.calculateChainableXcertSelector();
+    var supports = await xcert.supportsInterface(bytes);
+    assert.equal(supports, true);
+  });
+
+  it('Checks RevokableXcert selector', async () => {
+    var xcert = await RevokableXcert.new('Foo', 'F');
+    var bytes = await selector.calculateRevokableXcertSelector();
     var supports = await xcert.supportsInterface(bytes);
     assert.equal(supports, true);
   });
