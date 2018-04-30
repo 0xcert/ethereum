@@ -5,7 +5,7 @@
 
 > 0xcert protocol implementation for Ethereum blockchain.
 
-This is the official implementation of the 0xcert protocol for the Ethereum blockchain. It follows the technical details described in the official [0xcert whitepaper](/0xcert/whitepaper).
+This is the official implementation of the 0xcert protocol for the Ethereum blockchain. It follows the technical details described in the official [0xcert whitepaper](https://github.com/0xcert/whitepaper).
 
 This is an open source repository and the project is build with [Truffle framework](http://truffleframework.com).
 
