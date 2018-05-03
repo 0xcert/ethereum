@@ -42,10 +42,6 @@ contract('Xcert', (accounts) => {
     await assertRevert(xcert.mint('0', id3, mockProof, '', { from: accounts[1] }));
   });
 
-  it('throws when trying to mint NFToken with uri length more then 2083 chars', async () => {
-    await assertRevert(xcert.mint(accounts[0], id4, mockProof, 'sdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfddfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfdsdfsdfsdfsdfsdfsdfdsfdsfsdfsdfsdfdsfdsfdsfdsfdsfdsfsdfdsfsdfsdfd'));
-  });
-
   it('correctly authotizes address for minting', async () => {
     var { logs } = await xcert.setMintAuthorizedAddress(accounts[1], true);
     let mintAuthorizedAddressEvent = logs.find(e => e.event === 'MintAuthorizedAddress');
@@ -234,7 +230,7 @@ contract('Xcert', (accounts) => {
     var recipient = accounts[2];
 
     await xcert.mint(sender, id2, mockProof, 'url2');
-    var { logs } = await xcert.safeTransferFrom(sender, recipient, id2, "", {from: sender});
+    var { logs } = await xcert.safeTransferFrom(sender, recipient, id2, {from: sender});
     let transferEvent = logs.find(e => e.event === 'Transfer');
     assert.notEqual(transferEvent, undefined);
 
@@ -252,7 +248,7 @@ contract('Xcert', (accounts) => {
     var recipient = xcert.address;
 
     await xcert.mint(sender, id2, mockProof, 'url2');
-    await assertRevert(xcert.safeTransferFrom(sender, recipient, id2, "", {from: sender}));
+    await assertRevert(xcert.safeTransferFrom(sender, recipient, id2, {from: sender}));
   });
 
   it('corectly safe transfers NFToken from owner to smart contract that can recieve NFTokens', async () => {
@@ -261,7 +257,7 @@ contract('Xcert', (accounts) => {
     var recipient = tokenReceiverMock.address;
 
     await xcert.mint(sender, id2, mockProof, 'url2');
-    var { logs } = await xcert.safeTransferFrom(sender, recipient, id2, "", {from: sender});
+    var { logs } = await xcert.safeTransferFrom(sender, recipient, id2, {from: sender});
     let transferEvent = logs.find(e => e.event === 'Transfer');
     assert.notEqual(transferEvent, undefined);
 

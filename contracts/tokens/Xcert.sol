@@ -4,16 +4,18 @@ import "../math/SafeMath.sol";
 import "../ownership/Ownable.sol";
 import "./ERC721.sol";
 import "./ERC721Metadata.sol";
-import "./ERC165.sol";
+import "./ERC165implementation.sol";
 import "./ERC721TokenReceiver.sol";
+import "../utils/AddressUtils.sol";
 
 /*
  * @title None-fungable token.
  * @dev Xcert is an implementation of EIP721 and EIP721Metadata. This contract follows
  * the implementation at goo.gl/FLaJc9.
  */
-contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
+contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165implementation {
   using SafeMath for uint256;
+  using AddressUtils for address;
 
   /*
    * @dev A descriptive name for a collection of NFTs.
@@ -52,14 +54,11 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
 
   /*
    * @dev Mapping from NFToken ID to proof.
+   * @notice token Proof has to exist for every token.
    */
   mapping (uint256 => string[]) internal idToProof;
 
-  /*
-   * @dev Mapping of supported intefraces.
-   * You must not set element 0xffffffff to true.
-   */
-  mapping(bytes4 => bool) internal supportedInterfaces;
+
 
   /*
    * @dev Mapping of addresses authorized to mint new NFTokens.
@@ -68,10 +67,9 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
 
   /*
    * @dev Magic value of a smart contract that can recieve NFToken.
+   * Equal to: keccak256("onERC721Received(address,uint256,bytes)").
    */
-  bytes4 private constant MAGIC_ONERC721RECEIVED = bytes4(
-    keccak256("onERC721Received(address,uint256,bytes)")
-  );
+  bytes4 constant MAGIC_ONERC721RECEIVED = 0xf0b9e5ba;
 
   /*
    * @dev This emits when ownership of any NFT changes by any mechanism.
@@ -108,8 +106,8 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
    * @param _tokenId ID of the NFToken to validate.
    */
   modifier canOperate(uint256 _tokenId) {
-    address owner = idToOwner[_tokenId];
-    require(owner == msg.sender || ownerToOperators[owner][msg.sender]);
+    address tokenOwner = idToOwner[_tokenId];
+    require(tokenOwner == msg.sender || ownerToOperators[tokenOwner][msg.sender]);
     _;
   }
 
@@ -118,11 +116,11 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
    * @param _tokenId ID of the NFToken to transfer.
    */
   modifier canTransfer(uint256 _tokenId) {
-    address owner = idToOwner[_tokenId];
+    address tokenOwner = idToOwner[_tokenId];
     require(
-      owner == msg.sender
+      tokenOwner == msg.sender
       || getApproved(_tokenId) == msg.sender
-      || ownerToOperators[owner][msg.sender]
+      || ownerToOperators[tokenOwner][msg.sender]
     );
 
     _;
@@ -155,7 +153,6 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
   {
     xcertName = _name;
     xcertSymbol = _symbol;
-    supportedInterfaces[0x01ffc9a7] = true; // ERC165
     supportedInterfaces[0x80ac58cd] = true; // ERC721
     supportedInterfaces[0x5b5e139f] = true; // ERC721Metadata
     supportedInterfaces[0x355d09e9] = true; // Xcert
@@ -245,8 +242,8 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
     canTransfer(_tokenId)
     validNFToken(_tokenId)
   {
-    address owner = idToOwner[_tokenId];
-    require(owner == _from);
+    address tokenOwner = idToOwner[_tokenId];
+    require(tokenOwner == _from);
     require(_to != address(0));
 
     _transfer(_to, _tokenId);
@@ -262,12 +259,12 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
     canOperate(_tokenId)
     validNFToken(_tokenId)
   {
-    address owner = idToOwner[_tokenId];
-    require(_approved != owner);
+    address tokenOwner = idToOwner[_tokenId];
+    require(_approved != tokenOwner);
     require(!(getApproved(_tokenId) == address(0) && _approved == address(0)));
 
     idToApprovals[_tokenId] = _approved;
-    emit Approval(owner, _approved, _tokenId);
+    emit Approval(tokenOwner, _approved, _tokenId);
   }
 
   /*
@@ -331,20 +328,16 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
     canTransfer(_tokenId)
     validNFToken(_tokenId)
   {
-    address owner = idToOwner[_tokenId];
-    require(owner == _from);
+    address tokenOwner = idToOwner[_tokenId];
+    require(tokenOwner == _from);
     require(_to != address(0));
 
     _transfer(_to, _tokenId);
 
-    // Do the callback after everything is done to avoid reentrancy attack
-    uint256 codeSize;
-    assembly { codeSize := extcodesize(_to) }
-    if (codeSize == 0) {
-        return;
+    if (_to.isContract()) {
+      bytes4 retval = ERC721TokenReceiver(_to).onERC721Received(_from, _tokenId, _data);
+      require(retval == MAGIC_ONERC721RECEIVED);
     }
-    bytes4 retval = ERC721TokenReceiver(_to).onERC721Received(_from, _tokenId, _data);
-    require(retval == MAGIC_ONERC721RECEIVED);
   }
 
   /*
@@ -376,12 +369,10 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
                 string _uri)
     external
     canMint()
-    returns (bool)
   {
     require(_to != address(0));
     require(_id != 0);
     require(idToOwner[_id] == address(0));
-    require(utfStringLength(_uri) <= 2083);
     require(bytes(_proof).length > 0);
 
     idToUri[_id] = _uri;
@@ -389,11 +380,11 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
     addNFToken(_to, _id);
 
     emit Transfer(address(0), _to, _id);
-    return true;
   }
 
   /*
    * @dev Gets proof for _tokenId.
+   * @notice token Proof has to exist.
    * @param _tokenId Id of the NFToken we want to get proof of.
    */
   function tokenProof(uint256 _tokenId)
@@ -412,7 +403,6 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
   function clearApproval(address _owner, uint256 _tokenId)
     internal
   {
-    require(idToOwner[_tokenId] == _owner);
     delete idToApprovals[_tokenId];
     emit Approval(_owner, 0, _tokenId);
   }
@@ -446,44 +436,6 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
   }
 
   /*
-   * @dev Calculates string length. This function is taken from https://goo.gl/dLgN7k.
-   * A string is basically identical to bytes only that it is assumed to hold the UTF-8 encoding
-   * of a real string. Since string stores the data in UTF-8 encoding it is quite expensive to
-   * compute the number of characters in the string (the encoding of some characters takes more than
-   * a single byte). Because of that, string s; s.length is not yet supported and not even index
-   * access s[2]. But if you want to access the low-level byte encoding of the string, you can use
-   * bytes(s).length and bytes(s)[2] which will result in the number of bytes in the UTF-8 encoding
-   * of the string (not the number of characters) and the second byte (not character) of the UTF-8
-   * encoded string, respectively.
-   * This function takes the bytes and shifts them to check value and calculate te appropriate
-   * length. Details can be found at https://goo.gl/MzagzL.
-   * @param str UTF string we want the length of.
-   */
-  function utfStringLength(string _str)
-    private
-    pure
-    returns (uint256 length)
-  {
-    uint256 i = 0;
-    bytes memory stringRep = bytes(_str);
-
-    while (i < stringRep.length) {
-      if (stringRep[i] >> 7 == 0) {
-        i += 1;
-      } else if (stringRep[i] >> 5 == 0x6) {
-        i += 2;
-      } else if (stringRep[i] >> 4 == 0xE) {
-        i += 3;
-      } else if (stringRep[i] >> 3 == 0x1E) {
-        i += 4;
-      } else {
-        i += 1;
-      }
-      length++;
-    }
-  }
-
-  /*
    * @dev Returns a descriptive name for a collection of NFTokens.
    */
   function name()
@@ -510,25 +462,14 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165 {
    * @param _tokenId Id for which we want uri.
    */
   function tokenURI(uint256 _tokenId)
+    validNFToken(_tokenId)
     external
     view
     returns (string)
   {
-    require(idToOwner[_tokenId] != address(0));
     return idToUri[_tokenId];
   }
 
-  /*
-   * @dev Function to check which interfaces are suported by this contract.
-   * @param interfaceID If of the interface.
-   */
-  function supportsInterface(bytes4 interfaceID)
-    external
-    view
-    returns (bool)
-  {
-    return supportedInterfaces[interfaceID];
-  }
 
   /*
    * @dev Sets mint authorised address.

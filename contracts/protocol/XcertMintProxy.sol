@@ -75,9 +75,8 @@ contract XcertMintProxy is Ownable {
                 address _to)
     external
     onlyAuthorized
-    returns (bool)
   {
-    return Xcert(_xcert).mint(_to, _id, _proof, _uri);
+    Xcert(_xcert).mint(_to, _id, _proof, _uri);
   }
 
   /*
