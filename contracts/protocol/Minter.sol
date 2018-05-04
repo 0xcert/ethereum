@@ -331,7 +331,7 @@ contract Minter is ERC165implementation {
   function _mintViaXcertMintProxy(MintData _mintData)
     internal
   {
-     XcertMintProxy(XCERT_MINT_PROXY_CONTRACT)
+    XcertMintProxy(XCERT_MINT_PROXY_CONTRACT)
       .mint(_mintData.xcert, _mintData.id, _mintData.proof, _mintData.uri, _mintData.to);
   }
 

@@ -54,11 +54,9 @@ contract Xcert is Ownable, ERC721, ERC721Metadata, ERC165implementation {
 
   /*
    * @dev Mapping from NFToken ID to proof.
-   * @notice token Proof has to exist for every token.
+   * @notice The Proof array for every token must include one or more items.
    */
   mapping (uint256 => string[]) internal idToProof;
-
-
 
   /*
    * @dev Mapping of addresses authorized to mint new NFTokens.
