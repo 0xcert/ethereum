@@ -6,12 +6,12 @@ import "../tokens/ERC20.sol";
 import "../tokens/ERC721.sol";
 import "./TokenTransferProxy.sol";
 import "./NFTokenTransferProxy.sol";
-import "../tokens/ERC165.sol";
+import "../tokens/ERC165implementation.sol";
 
 /*
  * @dev based on: https://github.com/0xProject/contracts/blob/master/contracts/Exchange.sol
  */
-contract Swapper is ERC165 {
+contract Swapper is ERC165implementation {
 
   using SafeMath for uint256;
 
@@ -47,11 +47,6 @@ contract Swapper is ERC165 {
    */
   mapping(bytes32 => bool) public swapPerformed;
 
-  /*
-   * @dev Mapping of supported intefraces.
-   * You must not set element 0xffffffff to true.
-   */
-  mapping(bytes4 => bool) internal supportedInterfaces;
 
   /*
    * @dev This event emmits when NFToken changes ownership.
@@ -100,7 +95,6 @@ contract Swapper is ERC165 {
     TOKEN_CONTRACT = _xctToken;
     TOKEN_TRANSFER_PROXY_CONTRACT = _tokenTransferProxy;
     NFTOKEN_TRANSFER_PROXY_CONTRACT = _nfTokenTransferProxy;
-    supportedInterfaces[0x01ffc9a7] = true; // ERC165
     supportedInterfaces[0xe20524dd] = true; // Swapper
   }
 
@@ -309,18 +303,6 @@ contract Swapper is ERC165 {
       _r,
       _s
     );
-  }
-
-  /*
-   * @dev Function to check which interfaces are suported by this contract.
-   * @param interfaceID If of the interface.
-   */
-  function supportsInterface(bytes4 interfaceID)
-    external
-    view
-    returns (bool)
-  {
-    return supportedInterfaces[interfaceID];
   }
 
   /*
