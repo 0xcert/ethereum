@@ -1,7 +1,7 @@
 <img src="assets/cover.png" />
 
 ![Build Status](https://travis-ci.org/0xcert/ethereum.svg?branch=master)&nbsp;
-[![Dependency Status](https://gemnasium.com/badges/github.com/0xcert/ethereum.svg)](https://gemnasium.com/github.com/0xcert/ethereum)
+[![Dependency Status](https://gemnasium.com/badges/github.com/0xcert/ethereum.svg)](https://gemnasium.com/github.com/0xcert/ethereum) [![Greenkeeper badge](https://badges.greenkeeper.io/0xcert/ethereum.svg)](https://greenkeeper.io/)
 
 > 0xcert protocol implementation for Ethereum blockchain.
 
